@@ -597,6 +597,54 @@
       color: var(--color-cyan);
     }
     .icon-btn:hover { background: rgba(0, 212, 255, 0.1); }
+    .header-btn {
+      height: 38px; padding: 0 14px;
+      border: 1px solid var(--border-cyan); background: rgba(255, 255, 255, 0.04);
+      color: var(--color-cyan); border-radius: 8px;
+      font-size: 13px; font-weight: 600;
+    }
+    .header-btn:hover { background: rgba(0, 212, 255, 0.1); }
+
+    /* 로그인 화면 */
+    #login-screen {
+      display: flex; align-items: center; justify-content: center;
+      position: fixed; inset: 0; z-index: 1000;
+      padding: 24px;
+      background-color: var(--bg-primary);
+      background-image:
+        linear-gradient(rgba(0, 212, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 212, 255, 0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .login-card {
+      width: 100%; max-width: 380px; text-align: center;
+      background: var(--bg-card); border: 1px solid var(--border-cyan);
+      border-radius: 16px; padding: 38px 32px;
+      box-shadow: 0 0 40px rgba(0, 212, 255, 0.12);
+    }
+    .login-logo { font-size: 44px; margin-bottom: 12px; }
+    .login-title {
+      font-size: 24px; font-weight: 700; margin: 0 0 28px;
+      background: linear-gradient(135deg, #00D4FF, #7B2FBE);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    #login-form { display: flex; flex-direction: column; gap: 12px; }
+    #login-form input {
+      width: 100%; padding: 12px 14px; font-size: 15px;
+      background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color);
+      color: var(--text-primary); border-radius: 8px; font-family: inherit;
+    }
+    #login-form input::placeholder { color: var(--text-muted); }
+    #login-form input:focus {
+      outline: none; border-color: var(--color-cyan); box-shadow: 0 0 8px rgba(0, 212, 255, 0.2);
+    }
+    .login-btn {
+      margin-top: 6px; padding: 12px; font-size: 15px; font-weight: 700;
+      background: linear-gradient(135deg, #00D4FF, #0099BB); color: #0A0E1A;
+      border: none; border-radius: 8px; cursor: pointer;
+    }
+    .login-btn:hover { filter: brightness(1.1); box-shadow: 0 4px 16px rgba(0, 212, 255, 0.3); }
+    .login-error { color: var(--color-danger); font-size: 13px; min-height: 18px; }
 
     /* 데이터 로드 실패 배너 */
     #data-error-banner {
@@ -801,6 +849,20 @@
   </style>
 </head>
 <body>
+  <!-- 로그인 화면 (공통 비밀번호) -->
+  <div id="login-screen">
+    <div class="login-card">
+      <div class="login-logo">📋</div>
+      <h1 class="login-title">멘토 모니터링</h1>
+      <form id="login-form" autocomplete="off">
+        <input type="text" id="login-id" placeholder="아이디" autocomplete="username" />
+        <input type="password" id="login-pw" placeholder="비밀번호" autocomplete="current-password" />
+        <button type="submit" class="login-btn">로그인</button>
+        <div id="login-error" class="login-error"></div>
+      </form>
+    </div>
+  </div>
+
   <header>
     <h1><span class="logo-emoji">📋</span><span class="app-title">멘토 모니터링</span></h1>
     <div class="header-spacer"></div>
@@ -808,6 +870,7 @@
       <span class="dot"></span><span id="conn-text">연결 중…</span>
     </span>
     <button class="icon-btn" id="settings-btn" title="설정">⚙️</button>
+    <button class="header-btn" id="logout-btn">로그아웃</button>
   </header>
 
   <div class="tab-bar" id="tab-bar"></div>
@@ -1822,6 +1885,48 @@
       safeWrite(db.ref().update(updates), "산출물 삭제에 실패했습니다.");
       logActivity('산출물 "' + name + '" 삭제');
     }
+
+    /* =========================================================
+       로그인 게이트 (공통 아이디/비밀번호, sessionStorage 기반)
+       ========================================================= */
+    const AUTH_ID = "manager";
+    const AUTH_PW = "playdata2026!";
+
+    function isLoggedIn() { return sessionStorage.getItem("isLoggedIn") === "true"; }
+    function showLogin() {
+      document.getElementById("login-screen").style.display = "flex";
+      const idEl = document.getElementById("login-id");
+      if (idEl) idEl.focus();
+    }
+    function hideLogin() {
+      document.getElementById("login-screen").style.display = "none";
+    }
+    function logout() {
+      sessionStorage.removeItem("isLoggedIn");
+      document.getElementById("login-id").value = "";
+      document.getElementById("login-pw").value = "";
+      showLogin();
+    }
+
+    document.getElementById("login-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const id = document.getElementById("login-id").value.trim();
+      const pw = document.getElementById("login-pw").value;
+      const errEl = document.getElementById("login-error");
+      if (id === AUTH_ID && pw === AUTH_PW) {
+        sessionStorage.setItem("isLoggedIn", "true");
+        errEl.textContent = "";
+        document.getElementById("login-pw").value = "";
+        hideLogin();
+      } else {
+        errEl.textContent = "아이디 또는 비밀번호가 올바르지 않습니다.";
+        document.getElementById("login-pw").value = "";
+      }
+    });
+    document.getElementById("logout-btn").addEventListener("click", logout);
+
+    // 새로고침 시 세션 확인 → 로그인 상태면 바로 메인 표시
+    if (isLoggedIn()) hideLogin(); else showLogin();
 
     /* =========================================================
        시작
