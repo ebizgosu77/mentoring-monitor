@@ -1,0 +1,1805 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>멘토링 모니터</title>
+
+  <!-- Firebase v9 compat CDN -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+  <!-- Google Fonts: Noto Sans KR -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      /* encorecampus.ai 다크/테크 디자인 토큰 */
+      --bg-primary: #0A0E1A;
+      --bg-secondary: #0D1421;
+      --bg-card: #0F2A2A;
+      --bg-card-hover: #163535;
+      --color-cyan: #00D4FF;
+      --color-purple: #7B2FBE;
+      --color-teal: #00B4A0;
+      --color-cyan-dim: #00D4FF33;
+      --color-success: #00D4A0;
+      --color-warning: #FFB347;
+      --color-danger: #FF4D6D;
+      --text-primary: #FFFFFF;
+      --text-secondary: #A0AEC0;
+      --text-muted: #4A5568;
+      --border-color: #1A3A3A;
+      --border-cyan: #00D4FF44;
+
+      /* 기존 컴포넌트 호환용 별칭 → 다크 테마로 매핑 */
+      --bg: var(--bg-primary);
+      --panel: var(--bg-card);
+      --border: var(--border-color);
+      --text: var(--text-primary);
+      --muted: var(--text-secondary);
+      --primary: var(--color-cyan);
+      --primary-dark: #0099BB;
+      --primary-soft: rgba(0, 212, 255, 0.13);
+      --success: var(--color-success);
+      --success-soft: rgba(0, 212, 160, 0.12);
+      --danger: var(--color-danger);
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Roboto, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    button {
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    /* ---------- Header ---------- */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--panel);
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    header h1 {
+      font-size: 20px;
+      margin: 0;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+    .header-spacer { flex: 1; }
+
+    .conn-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .conn-badge .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+    }
+    .conn-badge.online { background: var(--success-soft); color: var(--success); }
+    .conn-badge.online .dot { background: var(--success); }
+    .conn-badge.offline { background: #fee2e2; color: var(--danger); }
+    .conn-badge.offline .dot { background: var(--danger); }
+
+    .icon-btn {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      font-size: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+    .icon-btn:hover { background: var(--bg); }
+
+    /* ---------- Tabs ---------- */
+    .tab-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 14px 20px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+    }
+    .tab {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+      transition: all 0.15s;
+    }
+    .tab:hover { border-color: var(--primary); color: var(--primary); }
+    .tab.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .add-course-btn {
+      border: 1px dashed var(--primary);
+      background: var(--primary-soft);
+      color: var(--primary);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .add-course-btn:hover { background: #e0e7ff; }
+
+    /* ---------- Main ---------- */
+    main {
+      padding: 24px 20px 60px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .empty-state {
+      text-align: center;
+      color: var(--muted);
+      padding: 80px 20px;
+    }
+    .empty-state .big { font-size: 40px; margin-bottom: 10px; }
+
+    .course-title {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .course-title h2 { margin: 0; font-size: 22px; }
+    .course-title .sub { color: var(--muted); font-size: 13px; }
+
+    /* ---------- Matrix table ---------- */
+    .table-wrap {
+      overflow-x: auto;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+    }
+    table.matrix {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 600px;
+    }
+    table.matrix th, table.matrix td {
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      text-align: center;
+      white-space: nowrap;
+    }
+    table.matrix thead th {
+      background: #f9fafb;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+    }
+    table.matrix .stage-head {
+      background: var(--primary-soft);
+      color: var(--primary-dark);
+    }
+    table.matrix .mentor-cell {
+      text-align: left;
+      font-weight: 600;
+      background: #fafbff;
+      position: sticky;
+      left: 0;
+      z-index: 1;
+    }
+    table.matrix .corner {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: #f9fafb;
+      text-align: left;
+    }
+    .progress-pill {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      display: block;
+      margin-top: 2px;
+    }
+
+    .check-cell {
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.12s;
+      min-width: 90px;
+    }
+    .check-cell:hover { background: #f3f4f6; }
+    .check-cell.done { background: #d1fae5; }
+    .check-cell.done:hover { background: #b8f0d6; }
+    .check-box { width: 18px; height: 18px; cursor: pointer; accent-color: var(--success); }
+    .check-cell .meta {
+      display: block;
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* 완료율 표시 */
+    .rate-head {
+      background: #fff7ed !important;
+      color: #c2410c;
+    }
+    td.mentor-total {
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      background: #fafbff;
+      white-space: nowrap;
+    }
+    tr.rate-row td {
+      background: #f9fafb;
+      font-weight: 600;
+      font-size: 12px;
+      color: var(--primary-dark);
+    }
+    tr.rate-row td.rate-label {
+      background: #f3f4f6;
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      text-align: left;
+    }
+
+    /* ---------- Activity log ---------- */
+    .log-panel {
+      margin-top: 28px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 16px 18px;
+    }
+    .log-panel h3 { margin: 0 0 12px; font-size: 15px; }
+    .log-list { list-style: none; margin: 0; padding: 0; max-height: 260px; overflow-y: auto; }
+    .log-list li {
+      font-size: 13px;
+      padding: 7px 0;
+      border-bottom: 1px solid #f1f3f7;
+      display: flex;
+      gap: 10px;
+    }
+    .log-list li:last-child { border-bottom: none; }
+    .log-time { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .log-empty { color: var(--muted); font-size: 13px; }
+
+    /* ---------- Modal ---------- */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 16px;
+      overflow-y: auto;
+      z-index: 50;
+    }
+    .modal {
+      background: var(--panel);
+      border-radius: 14px;
+      width: 100%;
+      max-width: 720px;
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
+    }
+    .modal-head {
+      display: flex;
+      align-items: center;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-head h2 { margin: 0; font-size: 18px; flex: 1; }
+    .modal-body { padding: 22px; }
+
+    .settings-section { margin-bottom: 26px; }
+    .settings-section > h4 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      color: var(--primary-dark);
+      border-left: 3px solid var(--primary);
+      padding-left: 8px;
+    }
+    .item-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+    }
+    .item-row .name { flex: 1; }
+    .item-row.indent { padding-left: 20px; }
+    .item-row.stage-group {
+      font-weight: 600;
+      color: var(--primary-dark);
+      margin-top: 6px;
+    }
+
+    input[type="text"] {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    input[type="text"]:focus { outline: 2px solid var(--primary-soft); border-color: var(--primary); }
+
+    .mini-btn {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      border-radius: 7px;
+      padding: 5px 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .mini-btn:hover { background: var(--bg); color: var(--text); }
+    .mini-btn.danger:hover { color: var(--danger); border-color: var(--danger); }
+    .mini-btn.primary {
+      background: var(--primary); color: #fff; border-color: var(--primary);
+    }
+    .mini-btn.primary:hover { background: var(--primary-dark); }
+
+    .add-inline { display: flex; gap: 8px; margin-top: 10px; }
+    .add-inline input { flex: 1; }
+
+    .stage-block {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+    }
+
+    /* ---------- Settings drawer (슬라이드 패널) ---------- */
+    .set-overlay {
+      position: fixed; inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      z-index: 50; opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+    .set-overlay.open { opacity: 1; }
+    .set-drawer {
+      position: fixed; top: 0; right: 0; height: 100%;
+      width: 580px; max-width: 94vw;
+      background: var(--panel);
+      box-shadow: -10px 0 40px rgba(15, 23, 42, 0.25);
+      display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(.4, 0, .2, 1);
+    }
+    .set-overlay.open .set-drawer { transform: translateX(0); }
+    .set-head {
+      display: flex; align-items: center;
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+    }
+    .set-head h2 { margin: 0; font-size: 18px; flex: 1; }
+
+    .set-tabbar { display: flex; border-bottom: 1px solid var(--border); }
+    .set-tab {
+      flex: 1; border: none; background: none;
+      padding: 13px 8px; font-size: 14px; font-weight: 600;
+      color: var(--muted); border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .set-tab:hover { color: var(--primary); background: var(--bg); }
+    .set-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    .set-body { flex: 1; overflow-y: auto; padding: 20px; }
+    .set-hint { color: var(--muted); font-size: 12px; margin: 0 0 12px; }
+    .set-empty { color: var(--muted); text-align: center; padding: 36px 10px; }
+
+    .set-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 0; border-bottom: 1px solid #f1f3f7;
+    }
+    .set-row .ord {
+      width: 24px; text-align: center; flex: none;
+      color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums;
+    }
+    .name-input { flex: 1; min-width: 0; }
+
+    .del-btn {
+      border: 1px solid var(--border); background: var(--panel);
+      color: var(--muted); border-radius: 7px;
+      padding: 6px 11px; font-size: 12px; flex: none; white-space: nowrap;
+    }
+    .del-btn:hover { color: var(--danger); border-color: var(--danger); background: #fef2f2; }
+
+    .add-btn {
+      width: 100%; margin-top: 14px;
+      border: 1px dashed var(--primary); background: var(--primary-soft);
+      color: var(--primary); border-radius: 9px;
+      padding: 10px; font-size: 14px; font-weight: 600;
+    }
+    .add-btn:hover:not(:disabled) { background: #e0e7ff; }
+    .add-btn:disabled { opacity: 0.5; cursor: not-allowed; border-style: solid; }
+    .add-btn.sm { width: auto; margin: 0; padding: 6px 12px; font-size: 12px; flex: none; }
+
+    .course-select {
+      width: 100%; margin-bottom: 18px;
+      border: 1px solid var(--border); border-radius: 9px;
+      padding: 9px 11px; font-size: 14px; font-family: inherit; background: #fff;
+    }
+
+    .set-stage-card {
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 12px 14px; margin-bottom: 14px;
+    }
+    .set-stage-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .set-stage-head .name-input { font-weight: 600; }
+    .deliv-row { display: flex; align-items: center; gap: 8px; padding: 5px 0 5px 18px; }
+    .deliv-row .bullet { color: var(--muted); flex: none; }
+
+    /* ---------- Toast ---------- */
+    .toast-area {
+      position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
+      z-index: 100; display: flex; flex-direction: column; gap: 8px; align-items: center;
+    }
+    .toast {
+      background: var(--danger); color: #fff;
+      padding: 11px 20px; border-radius: 9px;
+      font-size: 13px; font-weight: 500;
+      box-shadow: 0 6px 18px rgba(220, 38, 38, 0.35);
+      animation: toast-in 0.25s ease;
+    }
+    .toast.hide { opacity: 0; transition: opacity 0.3s; }
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ---------- 수행일지 ---------- */
+    .journal-section {
+      margin-top: 28px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 18px 20px;
+    }
+    .journal-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .journal-head h3 { margin: 0; font-size: 16px; }
+    .journal-count { color: var(--muted); font-size: 12px; font-weight: 600; }
+
+    .journal-mentor-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .jm-tab {
+      border: 1px solid var(--border); background: var(--panel);
+      padding: 6px 14px; border-radius: 999px;
+      font-size: 13px; font-weight: 500; color: var(--muted);
+    }
+    .jm-tab:hover { border-color: var(--primary); color: var(--primary); }
+    .jm-tab.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+    .journal-form {
+      border: 1px solid var(--primary); background: var(--primary-soft);
+      border-radius: 10px; padding: 14px; margin-bottom: 16px;
+    }
+    .jf-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
+    .jf-row label {
+      width: 48px; flex: none; padding-top: 7px;
+      font-size: 13px; font-weight: 600; color: var(--text);
+    }
+    .jf-row input, .jf-row textarea {
+      flex: 1; min-width: 0;
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 7px 10px; font-size: 14px; font-family: inherit;
+    }
+    .jf-row textarea { min-height: 60px; resize: vertical; }
+    .jf-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+    .journal-item {
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 12px 14px; margin-bottom: 10px;
+    }
+    .ji-top { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+    .ji-date, .ji-checker {
+      border: 1px solid var(--border); border-radius: 7px;
+      padding: 6px 8px; font-size: 13px; font-family: inherit;
+    }
+    .ji-checker { flex: 1; min-width: 120px; }
+    .ji-content {
+      width: 100%; box-sizing: border-box;
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 10px; font-size: 14px; font-family: inherit;
+      min-height: 54px; resize: vertical;
+    }
+    .ji-date:focus, .ji-checker:focus, .ji-content:focus,
+    .jf-row input:focus, .jf-row textarea:focus {
+      outline: 2px solid var(--primary-soft); border-color: var(--primary);
+    }
+    .ji-meta { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+    .mini-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* =======================================================================
+       ENCORE THEME — 다크/테크 비주얼 오버라이드 (이 블록이 위 규칙을 덮어씀)
+       ======================================================================= */
+
+    /* ----- 기본 ----- */
+    body {
+      font-family: 'Noto Sans KR', 'Segoe UI', sans-serif;
+      color: var(--text-secondary);
+      background-color: var(--bg-primary);
+      background-image:
+        linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      background-attachment: fixed;
+    }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+    ::-webkit-scrollbar-thumb { background: #1f4747; border-radius: 6px; }
+    ::-webkit-scrollbar-thumb:hover { background: #2a5a5a; }
+
+    /* ----- 폼 요소 (다크) ----- */
+    input, textarea, select {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      border-radius: 6px;
+      font-family: inherit;
+    }
+    input::placeholder, textarea::placeholder { color: var(--text-muted); }
+    input:focus, textarea:focus, select:focus,
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--color-cyan);
+      box-shadow: 0 0 8px rgba(0, 212, 255, 0.2);
+    }
+    select option { background: var(--bg-secondary); color: var(--text-primary); }
+
+    /* ----- 헤더 ----- */
+    header {
+      background: rgba(10, 14, 26, 0.95);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-cyan);
+      box-shadow: none;
+    }
+    header h1 {
+      font-size: 22px; font-weight: 700;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    header h1 .app-title {
+      background: linear-gradient(135deg, #00D4FF, #7B2FBE);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .icon-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-cyan);
+      color: var(--color-cyan);
+    }
+    .icon-btn:hover { background: rgba(0, 212, 255, 0.1); }
+
+    /* ----- 연결 배지 ----- */
+    .conn-badge { border: 1px solid transparent; border-radius: 20px; }
+    .conn-badge.online {
+      background: rgba(0, 212, 160, 0.2); color: var(--color-success);
+      border-color: var(--color-success);
+    }
+    .conn-badge.online .dot { background: var(--color-success); box-shadow: 0 0 8px var(--color-success); }
+    .conn-badge.offline {
+      background: rgba(255, 77, 109, 0.2); color: var(--color-danger);
+      border-color: var(--color-danger);
+    }
+    .conn-badge.offline .dot { background: var(--color-danger); }
+
+    /* ----- 과정 탭 ----- */
+    .tab-bar { background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); }
+    .tab {
+      background: var(--bg-card); color: var(--text-secondary);
+      border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 20px;
+    }
+    .tab:hover { background: var(--bg-card-hover); color: var(--color-cyan); border-color: var(--border-cyan); }
+    .tab.active {
+      background: linear-gradient(135deg, #00D4FF22, #7B2FBE22);
+      color: var(--color-cyan); border-color: var(--border-cyan);
+      box-shadow: 0 0 12px rgba(0, 212, 255, 0.2);
+    }
+    .add-course-btn {
+      background: transparent; border: 1px solid var(--border-cyan);
+      color: var(--color-cyan); border-radius: 8px;
+    }
+    .add-course-btn:hover { background: rgba(0, 212, 255, 0.08); }
+
+    /* ----- 과정 제목 ----- */
+    .course-title h2 { color: var(--text-primary); }
+    .course-title .sub { color: var(--text-muted); }
+
+    /* ----- 체크 현황 테이블 ----- */
+    .table-wrap {
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      border-radius: 12px; box-shadow: var(--shadow);
+    }
+    table.matrix th, table.matrix td { border: 1px solid var(--border-color); }
+    table.matrix thead th {
+      background: rgba(0, 212, 255, 0.08); color: var(--color-cyan); font-size: 13px;
+    }
+    table.matrix .stage-head {
+      background: linear-gradient(90deg, #00D4FF15, transparent);
+      color: var(--color-cyan); border-bottom: 2px solid var(--border-cyan);
+    }
+    table.matrix .corner { background: rgba(0, 212, 255, 0.08); color: var(--color-cyan); }
+    table.matrix .mentor-cell { background: rgba(255, 255, 255, 0.02); color: var(--text-primary); }
+    table.matrix tbody tr:hover td { background: rgba(0, 212, 255, 0.05); }
+    table.matrix tbody tr:hover .mentor-cell { background: rgba(0, 212, 255, 0.07); }
+    .rate-head { background: rgba(123, 47, 190, 0.15) !important; color: var(--color-cyan); }
+
+    /* 완료율 셀 + 바 */
+    td.mentor-total { background: rgba(255, 255, 255, 0.02); }
+    .rate-cell { display: flex; flex-direction: column; gap: 5px; min-width: 96px; }
+    .rate-num { color: var(--color-cyan); font-weight: 700; font-size: 13px; }
+    .rate-bar { background: var(--bg-secondary); border-radius: 4px; height: 4px; overflow: hidden; }
+    .rate-bar > span {
+      display: block; height: 100%;
+      background: linear-gradient(90deg, var(--color-cyan), var(--color-teal));
+      border-radius: 4px; transition: width 0.3s ease;
+    }
+    tr.rate-row td { background: rgba(123, 47, 190, 0.08); color: var(--color-cyan); }
+    tr.rate-row td.rate-label { background: rgba(0, 212, 255, 0.08); color: var(--color-cyan); }
+
+    /* ----- 커스텀 체크박스 ----- */
+    .check-cell { min-width: 64px; }
+    .check-cell:hover { background: rgba(0, 212, 255, 0.05); }
+    .check-cell.done { background: rgba(0, 212, 160, 0.1); }
+    .check-cell.done:hover { background: rgba(0, 212, 160, 0.16); }
+    .check-box {
+      -webkit-appearance: none; appearance: none;
+      width: 18px; height: 18px; margin: 0; vertical-align: middle;
+      border: 2px solid var(--border-color); border-radius: 4px;
+      background: transparent; cursor: pointer; transition: all 0.15s; accent-color: initial;
+    }
+    .check-box:hover { border-color: var(--color-cyan); box-shadow: 0 0 8px rgba(0, 212, 255, 0.3); }
+    .check-box:checked {
+      border-color: var(--color-success); background-color: var(--color-success);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23FFFFFF' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: center; background-size: 13px;
+    }
+    .check-box:checked:hover { box-shadow: 0 0 8px rgba(0, 212, 160, 0.4); }
+
+    /* ----- 버튼 ----- */
+    .mini-btn {
+      background: transparent; border: 1px solid var(--border-cyan); color: var(--color-cyan);
+      border-radius: 8px;
+    }
+    .mini-btn:hover { background: rgba(0, 212, 255, 0.08); color: var(--color-cyan); }
+    .mini-btn.primary {
+      background: linear-gradient(135deg, #00D4FF, #0099BB);
+      color: #0A0E1A; font-weight: 700; border: none;
+    }
+    .mini-btn.primary:hover { filter: brightness(1.1); box-shadow: 0 4px 16px rgba(0, 212, 255, 0.3); background: linear-gradient(135deg, #00D4FF, #0099BB); }
+    .del-btn {
+      background: transparent; border: 1px solid var(--color-danger); color: var(--color-danger);
+    }
+    .del-btn:hover { background: rgba(255, 77, 109, 0.12); color: var(--color-danger); border-color: var(--color-danger); }
+    .add-btn {
+      background: transparent; border: 1px dashed var(--border-cyan); color: var(--color-cyan);
+    }
+    .add-btn:hover:not(:disabled) { background: rgba(0, 212, 255, 0.08); }
+    .add-btn.sm { color: var(--color-cyan); }
+
+    /* ----- 설정 드로어 ----- */
+    .set-overlay { background: rgba(5, 8, 16, 0.6); backdrop-filter: blur(2px); }
+    .set-drawer {
+      width: 420px; background: var(--bg-secondary);
+      border-left: 1px solid var(--border-cyan);
+      box-shadow: -8px 0 32px rgba(0, 212, 255, 0.1);
+    }
+    .set-head { border-bottom: 1px solid var(--border-color); }
+    .set-head h2 { color: var(--text-primary); }
+    .set-tabbar { border-bottom: 1px solid var(--border-color); }
+    .set-tab { color: var(--text-muted); border-bottom: 2px solid transparent; }
+    .set-tab:hover { color: var(--color-cyan); background: rgba(0, 212, 255, 0.04); }
+    .set-tab.active { color: var(--color-cyan); border-bottom-color: var(--color-cyan); }
+    .set-hint, .set-empty { color: var(--text-muted); }
+    .set-row { border-bottom: 1px solid var(--border-color); }
+    .set-row .ord { color: var(--text-muted); }
+    .set-stage-card { border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); }
+    .course-select { background: rgba(255, 255, 255, 0.05); color: var(--text-primary); }
+
+    /* ----- 토스트 (우측 하단, 성공/실패) ----- */
+    .toast-area {
+      top: auto; bottom: 22px; left: auto; right: 22px; transform: none;
+      align-items: flex-end;
+    }
+    .toast {
+      border-radius: 8px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); animation: toast-in-r 0.25s ease;
+    }
+    .toast.error { background: rgba(255, 77, 109, 0.13); border: 1px solid var(--color-danger); color: var(--color-danger); }
+    .toast.success { background: rgba(0, 212, 160, 0.13); border: 1px solid var(--color-success); color: var(--color-success); }
+    @keyframes toast-in-r {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* ----- 수행일지 ----- */
+    .journal-section { background: var(--bg-card); border: 1px solid var(--border-color); box-shadow: var(--shadow); }
+    .journal-head h3 { color: var(--text-primary); }
+    .journal-count { color: var(--color-cyan); }
+    .jm-tab {
+      background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border-color);
+    }
+    .jm-tab:hover { color: var(--color-cyan); border-color: var(--border-cyan); }
+    .jm-tab.active {
+      background: linear-gradient(135deg, #00D4FF22, #7B2FBE22);
+      color: var(--color-cyan); border-color: var(--border-cyan);
+      box-shadow: 0 0 12px rgba(0, 212, 255, 0.2);
+    }
+    .journal-form { background: rgba(0, 212, 255, 0.05); border: 1px solid var(--border-cyan); }
+    .jf-row label { color: var(--text-secondary); }
+    .journal-item {
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      border-radius: 8px; transition: border-color 0.15s;
+    }
+    .journal-item:hover { border-color: var(--border-cyan); }
+    .ji-date { color: var(--color-cyan); font-size: 12px; }
+    .ji-date::-webkit-calendar-picker-indicator { filter: invert(0.7) sepia(1) saturate(5) hue-rotate(160deg); }
+    .ji-checker {
+      background: var(--color-cyan-dim); color: var(--color-cyan);
+      border: 1px solid var(--border-cyan); font-size: 12px;
+    }
+    .ji-checker::placeholder { color: rgba(0, 212, 255, 0.5); }
+    .ji-meta { color: var(--text-muted); }
+
+    /* ----- 빈 상태 ----- */
+    .empty-state { color: var(--text-muted); }
+
+    /* ----- 반응형: 768px 미만 안내 ----- */
+    #mobile-guard { display: none; }
+    @media (max-width: 767px) {
+      header, .tab-bar, main, #modal-root { display: none !important; }
+      #mobile-guard {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        position: fixed; inset: 0; z-index: 9999;
+        background: var(--bg-primary); text-align: center; padding: 32px;
+      }
+      #mobile-guard .mg-icon { font-size: 48px; margin-bottom: 16px; }
+      #mobile-guard h2 {
+        margin: 0 0 10px; font-size: 18px;
+        background: linear-gradient(135deg, #00D4FF, #7B2FBE);
+        -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+      }
+      #mobile-guard p { margin: 0; color: var(--text-secondary); font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><span class="logo-emoji">📋</span><span class="app-title">멘토링 모니터</span></h1>
+    <div class="header-spacer"></div>
+    <span id="conn-badge" class="conn-badge offline">
+      <span class="dot"></span><span id="conn-text">연결 중…</span>
+    </span>
+    <button class="icon-btn" id="settings-btn" title="설정">⚙️</button>
+  </header>
+
+  <div class="tab-bar" id="tab-bar"></div>
+
+  <main id="main-content"></main>
+
+  <div id="modal-root"></div>
+
+  <!-- 768px 미만 안내 -->
+  <div id="mobile-guard">
+    <div class="mg-icon">🖥️</div>
+    <h2>데스크탑 환경에서 사용하세요</h2>
+    <p>이 앱은 넓은 화면에 최적화되어 있습니다.<br />데스크탑 또는 태블릿 가로 모드로 접속해 주세요.</p>
+  </div>
+
+  <script>
+    /* =========================================================
+       Firebase 초기화
+       ========================================================= */
+    const firebaseConfig = {
+      apiKey: "AIzaSyDlO7TnIEbdI4TjWDhs-qY0zvSlSvPLA9I",
+      authDomain: "mentoring-monitor.firebaseapp.com",
+      databaseURL: "https://mentoring-monitor-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "mentoring-monitor",
+      storageBucket: "mentoring-monitor.firebasestorage.app",
+      messagingSenderId: "980499060854",
+      appId: "1:980499060854:web:88fdb9939377e298cda757"
+    };
+
+    let db = null;
+    try {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.database();
+      console.log("[Firebase] 초기화 성공 ✅");
+    } catch (err) {
+      console.error("[Firebase] 초기화 실패 ❌", err);
+    }
+
+    const TS = firebase.database.ServerValue.TIMESTAMP;
+
+    /* =========================================================
+       전역 상태
+       ========================================================= */
+    const AppState = {
+      courses: {},
+      mentors: {},
+      stages: {},
+      deliverables: {},
+      checkStatus: {},
+      activityLogs: {},
+      currentCourseId: null
+    };
+
+    const USER = (typeof window !== "undefined" && "playdata@playdata.io") || "익명";
+
+    /* =========================================================
+       초기 샘플 데이터
+       ========================================================= */
+    const INITIAL_DATA = {
+      courses: {
+        course1: { name: "AI 과정 1기", order: 1 }
+      },
+      mentors: {
+        mentor1: { courseId: "course1", name: "멘토 A", order: 1 },
+        mentor2: { courseId: "course1", name: "멘토 B", order: 2 }
+      },
+      stages: {
+        stage1: { courseId: "course1", name: "1단계", order: 1 },
+        stage2: { courseId: "course1", name: "2단계", order: 2 }
+      },
+      deliverables: {
+        del1: { stageId: "stage1", name: "커리큘럼 검토", order: 1 },
+        del2: { stageId: "stage1", name: "멘토링 계획서", order: 2 },
+        del3: { stageId: "stage2", name: "중간 보고서", order: 1 }
+      },
+      checkStatus: {},
+      activityLogs: {}
+    };
+
+    /* =========================================================
+       최초 실행 시 시드 데이터 저장
+       ========================================================= */
+    function seedIfEmpty() {
+      if (!db) return Promise.resolve();
+      return db.ref("/").once("value").then(function (snap) {
+        if (!snap.exists() || !snap.hasChild("courses")) {
+          console.log("[Firebase] 데이터 없음 → 샘플 데이터 저장");
+          return db.ref("/").set(INITIAL_DATA);
+        }
+        console.log("[Firebase] 기존 데이터 감지됨");
+      });
+    }
+
+    /* =========================================================
+       데이터 구독 (onValue)
+       ========================================================= */
+    const SUBSCRIBE_PATHS = ["courses", "mentors", "stages", "deliverables", "checkStatus", "activityLogs"];
+    const loadedFlags = {};
+    SUBSCRIBE_PATHS.forEach(function (p) { loadedFlags[p] = false; });
+
+    function allLoaded() {
+      return SUBSCRIBE_PATHS.every(function (p) { return loadedFlags[p]; });
+    }
+
+    function subscribeAll() {
+      if (!db) {
+        document.getElementById("main-content").innerHTML =
+          '<div class="empty-state"><div class="big">⚠️</div>Firebase 연결에 실패했습니다.</div>';
+        return;
+      }
+      SUBSCRIBE_PATHS.forEach(function (path) {
+        db.ref(path).on("value", function (snap) {
+          AppState[path] = snap.val() || {};
+          loadedFlags[path] = true;
+          if (allLoaded()) {
+            ensureCurrentCourse();
+            renderApp();
+          }
+        }, function (err) {
+          console.error("[Firebase] 구독 오류 (" + path + ")", err);
+        });
+      });
+    }
+
+    /* =========================================================
+       연결 상태 모니터링
+       ========================================================= */
+    function monitorConnection() {
+      if (!db) { setConnBadge(false); return; }
+      db.ref(".info/connected").on("value", function (snap) {
+        const online = snap.val() === true;
+        setConnBadge(online);
+        if (online) console.log("[Firebase] 온라인 🟢");
+        else console.warn("[Firebase] 오프라인 🔴");
+      });
+    }
+
+    function setConnBadge(online) {
+      const badge = document.getElementById("conn-badge");
+      const text = document.getElementById("conn-text");
+      badge.className = "conn-badge " + (online ? "online" : "offline");
+      text.textContent = online ? "온라인" : "오프라인";
+    }
+
+    /* =========================================================
+       헬퍼
+       ========================================================= */
+    function genId(prefix) {
+      return prefix + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    }
+
+    // 객체를 [id, value] 배열로 변환 후 order 기준 정렬
+    function sortedEntries(obj) {
+      return Object.keys(obj || {})
+        .map(function (id) { return [id, obj[id]]; })
+        .sort(function (a, b) { return (a[1].order || 0) - (b[1].order || 0); });
+    }
+
+    function nextOrder(obj) {
+      const vals = Object.keys(obj || {}).map(function (k) { return obj[k].order || 0; });
+      return vals.length ? Math.max.apply(null, vals) + 1 : 1;
+    }
+
+    function ensureCurrentCourse() {
+      const ids = Object.keys(AppState.courses || {});
+      if (AppState.currentCourseId && AppState.courses[AppState.currentCourseId]) return;
+      const sorted = sortedEntries(AppState.courses);
+      AppState.currentCourseId = sorted.length ? sorted[0][0] : null;
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function fmtTime(ts) {
+      if (!ts) return "";
+      const d = new Date(ts);
+      const pad = function (n) { return n < 10 ? "0" + n : "" + n; };
+      return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) +
+             " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+    }
+
+    // 내부 감사 로그 (수행일지 activityLogs/{mentorId}/{logId} 와 충돌 방지를 위해 별도 경로)
+    function logActivity(message) {
+      if (!db) return;
+      db.ref("auditLogs").push({ message: message, user: USER, at: TS });
+    }
+
+    /* =========================================================
+       체크 상태: checkStatus[{mentorId}_{deliverableId}] =
+                   { checked: bool, updatedAt: ts, updatedBy: "manager" }
+       ========================================================= */
+    function checkKey(mentorId, delId) { return mentorId + "_" + delId; }
+
+    function isChecked(mentorId, delId) {
+      const node = AppState.checkStatus[checkKey(mentorId, delId)];
+      return !!(node && node.checked);
+    }
+    function getCheck(mentorId, delId) {
+      return AppState.checkStatus[checkKey(mentorId, delId)] || null;
+    }
+
+    function toggleCheck(mentorId, delId) {
+      if (!db) return;
+      const next = !isChecked(mentorId, delId);
+      const key = checkKey(mentorId, delId);
+      const mentorName = (AppState.mentors[mentorId] || {}).name || mentorId;
+      const delName = (AppState.deliverables[delId] || {}).name || delId;
+      // 경로: checkStatus/{mentorId}_{deliverableId}/checked (toggle)
+      safeWrite(db.ref("checkStatus/" + key).set({ checked: next, updatedAt: TS, updatedBy: "manager" }), "체크 상태 저장에 실패했습니다.");
+      logActivity(mentorName + ' — "' + delName + '" ' + (next ? "완료 체크" : "완료 해제"));
+    }
+
+    /* =========================================================
+       렌더링
+       ========================================================= */
+    // 렌더 상태 (Firebase 미러가 아닌 UI 로컬 상태)
+    let mainCourseRendered = null;   // 현재 골격이 그려진 과정 id
+    let journalMentorId = null;      // 수행일지에서 선택된 멘토
+    let journalAdding = false;       // 수행일지 추가 폼 열림 여부
+
+    function renderApp() {
+      renderTabs();
+      renderMain();
+      maybeRefreshSettings();
+    }
+
+    function renderTabs() {
+      const bar = document.getElementById("tab-bar");
+      const courses = sortedEntries(AppState.courses);
+      let html = "";
+      courses.forEach(function (entry) {
+        const id = entry[0], c = entry[1];
+        const active = id === AppState.currentCourseId ? " active" : "";
+        html += '<button class="tab' + active + '" data-course="' + id + '">' +
+                escapeHtml(c.name) + '</button>';
+      });
+      html += '<button class="add-course-btn" id="add-course-btn">+ 과정 추가</button>';
+      bar.innerHTML = html;
+
+      bar.querySelectorAll(".tab").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          AppState.currentCourseId = btn.getAttribute("data-course");
+          renderApp();
+        });
+      });
+      document.getElementById("add-course-btn").addEventListener("click", addCourse);
+    }
+
+    function renderMain() {
+      const main = document.getElementById("main-content");
+      const courseId = AppState.currentCourseId;
+
+      if (!courseId) {
+        main.innerHTML = '<div class="empty-state"><div class="big">📭</div>' +
+          '등록된 과정이 없습니다. 상단의 <b>+ 과정 추가</b>로 시작하세요.</div>';
+        mainCourseRendered = null;
+        return;
+      }
+
+      // 과정이 바뀌었거나 골격이 없으면 영역 골격 재생성 (수행일지 편집 상태 보존을 위해 분리)
+      if (mainCourseRendered !== courseId || !document.getElementById("check-area")) {
+        main.innerHTML =
+          '<div id="course-head"></div>' +
+          '<div id="check-area"></div>' +
+          '<div id="journal-area"></div>';
+        mainCourseRendered = courseId;
+        journalAdding = false;
+        journalMentorId = null; // 과정 전환 시 멘토 선택 초기화
+      }
+
+      // 제목 / 카운트 (매번 갱신)
+      const course = AppState.courses[courseId] || {};
+      const mentors = entriesByCourse(AppState.mentors, courseId);
+      const totalDels = entriesByCourse(AppState.stages, courseId).reduce(function (acc, s) {
+        return acc + delsByStage(s[0]).length;
+      }, 0);
+      document.getElementById("course-head").innerHTML =
+        '<div class="course-title"><h2>' + escapeHtml(course.name) + '</h2>' +
+        '<span class="sub">멘토 ' + mentors.length + '명 · 산출물 ' + totalDels + '개</span></div>';
+
+      // 산출물 체크 표 (매번 갱신)
+      const ca = document.getElementById("check-area");
+      ca.innerHTML = renderCheckTable(courseId);
+      ca.querySelectorAll(".check-box").forEach(function (box) {
+        box.addEventListener("change", function () {
+          toggleCheck(box.getAttribute("data-mentor"), box.getAttribute("data-del"));
+        });
+      });
+
+      // 수행일지 (편집 중이면 보존)
+      renderJournal(courseId, false);
+    }
+
+    /* =========================================================
+       산출물 체크 현황 표 (멘토 × 산출물 매트릭스)
+       ========================================================= */
+    function renderCheckTable(courseId) {
+      const mentors = sortedEntries(AppState.mentors).filter(function (e) { return e[1].courseId === courseId; });
+      const stages = sortedEntries(AppState.stages).filter(function (e) { return e[1].courseId === courseId; });
+
+      // 단계별 산출물 묶음
+      const stageBlocks = stages.map(function (s) {
+        const sid = s[0];
+        const dels = sortedEntries(AppState.deliverables).filter(function (e) { return e[1].stageId === sid; });
+        return { stageId: sid, stage: s[1], dels: dels };
+      }).filter(function (b) { return b.dels.length > 0; });
+
+      const totalDels = stageBlocks.reduce(function (a, b) { return a + b.dels.length; }, 0);
+
+      // 데이터 부족 안내
+      if (mentors.length === 0 || totalDels === 0) {
+        return '<div class="empty-state"><div class="big">🧩</div>' +
+          '설정에서 멘토와 산출물을 먼저 추가하세요.</div>';
+      }
+
+      let html = '<div class="table-wrap"><table class="matrix">';
+
+      // ----- 헤더 -----
+      html += '<thead>';
+      // 1행: 단계 헤더 (colspan) + 완료율 헤더
+      html += '<tr><th class="corner" rowspan="2">멘토 \\ 산출물</th>';
+      stageBlocks.forEach(function (b) {
+        html += '<th class="stage-head" colspan="' + b.dels.length + '">' + escapeHtml(b.stage.name) + '</th>';
+      });
+      html += '<th class="rate-head" rowspan="2">완료율</th></tr>';
+      // 2행: 산출물 이름 헤더
+      html += '<tr>';
+      stageBlocks.forEach(function (b) {
+        b.dels.forEach(function (d) {
+          html += '<th>' + escapeHtml(d[1].name) + '</th>';
+        });
+      });
+      html += '</tr></thead>';
+
+      // ----- 본문: 멘토 행 -----
+      html += '<tbody>';
+      mentors.forEach(function (mEntry) {
+        const mentorId = mEntry[0], mentor = mEntry[1];
+        let doneCount = 0;
+        let cells = "";
+        stageBlocks.forEach(function (b) {
+          b.dels.forEach(function (d) {
+            const delId = d[0];
+            const checked = isChecked(mentorId, delId);
+            if (checked) doneCount++;
+            cells += '<td class="check-cell' + (checked ? ' done' : '') + '">' +
+              '<input type="checkbox" class="check-box" data-mentor="' + mentorId +
+              '" data-del="' + delId + '"' + (checked ? ' checked' : '') + ' />' +
+              '</td>';
+          });
+        });
+        const mPct = totalDels ? Math.round((doneCount / totalDels) * 100) : 0;
+        html += '<tr><td class="mentor-cell">' + escapeHtml(mentor.name) + '</td>' + cells +
+          '<td class="mentor-total"><div class="rate-cell">' +
+            '<span class="rate-num">' + doneCount + '/' + totalDels + ' · ' + mPct + '%</span>' +
+            '<div class="rate-bar"><span style="width:' + mPct + '%"></span></div>' +
+          '</div></td></tr>';
+      });
+      html += '</tbody>';
+
+      // ----- 하단: 단계별 완료율 행 -----
+      let footTotalDone = 0;
+      let footCells = "";
+      stageBlocks.forEach(function (b) {
+        let sDone = 0;
+        const sTotal = mentors.length * b.dels.length;
+        mentors.forEach(function (mEntry) {
+          b.dels.forEach(function (d) {
+            if (isChecked(mEntry[0], d[0])) sDone++;
+          });
+        });
+        footTotalDone += sDone;
+        const sPct = sTotal ? Math.round((sDone / sTotal) * 100) : 0;
+        footCells += '<td colspan="' + b.dels.length + '">' +
+          escapeHtml(b.stage.name) + ': ' + sDone + '/' + sTotal + ' (' + sPct + '%)</td>';
+      });
+      const grandTotal = mentors.length * totalDels;
+      const grandPct = grandTotal ? Math.round((footTotalDone / grandTotal) * 100) : 0;
+      html += '<tfoot><tr class="rate-row"><td class="rate-label">단계별 완료율</td>' + footCells +
+        '<td>' + footTotalDone + '/' + grandTotal + ' (' + grandPct + '%)</td></tr></tfoot>';
+
+      html += '</table></div>';
+      return html;
+    }
+
+    /* =========================================================
+       수행일지 (Firebase: activityLogs/{mentorId}/{logId})
+         { date, content, checker, createdAt }
+       ========================================================= */
+    const JOURNAL_MAX = 30;
+
+    function todayStr() {
+      const d = new Date();
+      const pad = function (n) { return n < 10 ? "0" + n : "" + n; };
+      return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+    }
+
+    function journalLogs(mentorId) {
+      const o = (AppState.activityLogs && AppState.activityLogs[mentorId]) || {};
+      return Object.keys(o).map(function (id) { return [id, o[id]]; });
+    }
+    function journalCount(mentorId) { return journalLogs(mentorId).length; }
+
+    // force=true 면 항상 다시 그림. false 면 편집 중(폼 열림/입력 포커스)일 때 보존.
+    function renderJournal(courseId, force) {
+      const area = document.getElementById("journal-area");
+      if (!area) return;
+      if (!force) {
+        const ae = document.activeElement;
+        const editing = ae && area.contains(ae) && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA");
+        if (journalAdding || editing) return;
+      }
+      area.innerHTML = renderJournalHtml(courseId);
+      bindJournalEvents(courseId);
+    }
+
+    function renderJournalHtml(courseId) {
+      const mentors = entriesByCourse(AppState.mentors, courseId);
+      if (mentors.length === 0) {
+        return '<div class="journal-section"><div class="journal-head"><h3>📒 수행일지</h3></div>' +
+          '<div class="set-empty">설정에서 멘토를 먼저 추가하세요.</div></div>';
+      }
+      // 선택 멘토 유효성 보정 (기본: 첫 번째 멘토)
+      if (!journalMentorId || !mentors.some(function (e) { return e[0] === journalMentorId; })) {
+        journalMentorId = mentors[0][0];
+      }
+      const mid = journalMentorId;
+
+      // 멘토 탭
+      let tabs = '<div class="journal-mentor-tabs">';
+      mentors.forEach(function (e) {
+        tabs += '<button class="jm-tab' + (e[0] === mid ? ' active' : '') + '" data-jmentor="' + e[0] + '">' +
+          escapeHtml(e[1].name) + '</button>';
+      });
+      tabs += '</div>';
+
+      // 날짜 역순 정렬 (동일 날짜는 등록일시 역순)
+      const logs = journalLogs(mid).sort(function (a, b) {
+        const da = a[1].date || "", db_ = b[1].date || "";
+        if (da !== db_) return da < db_ ? 1 : -1;
+        return (b[1].createdAt || 0) - (a[1].createdAt || 0);
+      });
+      const count = logs.length;
+      const atMax = count >= JOURNAL_MAX;
+
+      let h = '<div class="journal-section">';
+      h += '<div class="journal-head"><h3>📒 수행일지</h3><span class="journal-count">' +
+        count + '/' + JOURNAL_MAX + '</span></div>';
+      h += tabs;
+
+      // 추가 영역
+      if (journalAdding) {
+        h += '<div class="journal-form">' +
+          '<div class="jf-row"><label>날짜</label><input type="date" id="jf-date" value="' + todayStr() + '" /></div>' +
+          '<div class="jf-row"><label>내용</label><textarea id="jf-content" placeholder="수행 내용을 입력하세요"></textarea></div>' +
+          '<div class="jf-row"><label>확인자</label><input type="text" id="jf-checker" placeholder="확인자 이름" /></div>' +
+          '<div class="jf-actions">' +
+          '<button class="mini-btn primary" id="jf-save" disabled>저장</button>' +
+          '<button class="mini-btn" id="jf-cancel">취소</button></div></div>';
+      } else {
+        h += '<button class="add-btn" data-jadd="1"' +
+          (atMax ? ' disabled title="최대 30개까지 등록 가능합니다."' : '') +
+          '>+ 수행일지 추가</button>';
+      }
+
+      // 목록
+      if (count === 0) {
+        h += '<div class="set-empty">등록된 수행일지가 없습니다.</div>';
+      } else {
+        logs.forEach(function (entry) {
+          const lid = entry[0], l = entry[1];
+          h += '<div class="journal-item">' +
+            '<div class="ji-top">' +
+              '<input type="date" class="ji-date" data-jfield="date" data-jid="' + lid + '" value="' + escapeHtml(l.date || "") + '" />' +
+              '<input type="text" class="ji-checker" data-jfield="checker" data-jid="' + lid + '" value="' + escapeHtml(l.checker || "") + '" placeholder="확인자" />' +
+              '<button class="del-btn" data-jdel="' + lid + '">삭제</button>' +
+            '</div>' +
+            '<textarea class="ji-content" data-jfield="content" data-jid="' + lid + '" placeholder="수행 내용">' + escapeHtml(l.content || "") + '</textarea>' +
+            '<div class="ji-meta">등록일시: ' + (l.createdAt ? fmtTime(l.createdAt) : "-") + '</div>' +
+          '</div>';
+        });
+      }
+
+      h += '</div>';
+      return h;
+    }
+
+    function bindJournalEvents(courseId) {
+      const area = document.getElementById("journal-area");
+      if (!area) return;
+
+      // 멘토 탭 전환
+      area.querySelectorAll(".jm-tab").forEach(function (t) {
+        t.addEventListener("click", function () {
+          journalMentorId = t.getAttribute("data-jmentor");
+          journalAdding = false;
+          renderJournal(courseId, true);
+        });
+      });
+
+      // 추가 버튼
+      const addBtn = area.querySelector("[data-jadd]");
+      if (addBtn) {
+        addBtn.addEventListener("click", function () {
+          journalAdding = true;
+          renderJournal(courseId, true);
+        });
+      }
+
+      // 추가 폼
+      if (journalAdding) {
+        const dateEl = area.querySelector("#jf-date");
+        const contentEl = area.querySelector("#jf-content");
+        const checkerEl = area.querySelector("#jf-checker");
+        const saveBtn = area.querySelector("#jf-save");
+        const cancelBtn = area.querySelector("#jf-cancel");
+        const mid = journalMentorId;
+        const full = journalCount(mid) >= JOURNAL_MAX;
+        if (full) showToast("최대 30개까지 등록 가능합니다.");
+
+        const validate = function () {
+          saveBtn.disabled = !(dateEl.value.trim() && contentEl.value.trim()) || full;
+        };
+        [dateEl, contentEl, checkerEl].forEach(function (el) {
+          el.addEventListener("input", validate);
+        });
+        validate();
+
+        saveBtn.addEventListener("click", function () {
+          const date = dateEl.value.trim();
+          const content = contentEl.value.trim();
+          if (!date || !content) return;
+          if (journalCount(mid) >= JOURNAL_MAX) { showToast("최대 30개까지 등록 가능합니다."); return; }
+          safeWrite(db.ref("activityLogs/" + mid).push({
+            date: date, content: content, checker: checkerEl.value.trim(), createdAt: TS
+          }), "수행일지 저장에 실패했습니다.");
+          journalAdding = false;
+          renderJournal(courseId, true);
+        });
+        cancelBtn.addEventListener("click", function () {
+          journalAdding = false;
+          renderJournal(courseId, true);
+        });
+      }
+
+      // 기존 항목: 포커스 벗어나면(onblur) 자동 저장
+      area.querySelectorAll("[data-jfield]").forEach(function (el) {
+        el.addEventListener("blur", function () {
+          saveJournalField(journalMentorId, el.getAttribute("data-jid"), el.getAttribute("data-jfield"), el);
+        });
+      });
+
+      // 항목 삭제 (확인 모달)
+      area.querySelectorAll("[data-jdel]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          deleteJournal(journalMentorId, btn.getAttribute("data-jdel"));
+        });
+      });
+    }
+
+    function saveJournalField(mentorId, lid, field, el) {
+      const log = ((AppState.activityLogs || {})[mentorId] || {})[lid];
+      if (!log) return;
+      const prev = log[field] || "";
+      const v = (el.value || "").trim();
+      // 날짜/내용은 필수 → 비우면 이전 값으로 복원
+      if ((field === "date" || field === "content") && !v) { el.value = prev; return; }
+      if (v === prev) return;
+      safeWrite(db.ref("activityLogs/" + mentorId + "/" + lid + "/" + field).set(v), "수행일지 저장에 실패했습니다.");
+    }
+
+    function deleteJournal(mentorId, lid) {
+      if (!window.confirm("이 수행일지를 삭제하시겠습니까?")) return;
+      safeWrite(db.ref("activityLogs/" + mentorId + "/" + lid).remove(), "수행일지 삭제에 실패했습니다.");
+    }
+
+    /* =========================================================
+       CRUD: 과정
+       ========================================================= */
+    function addCourse() {
+      if (Object.keys(AppState.courses).length >= 5) {
+        showToast("과정은 최대 5개까지 추가할 수 있습니다.");
+        return;
+      }
+      const name = prompt("새 과정 이름을 입력하세요:");
+      if (!name || !name.trim()) return;
+      const id = genId("course");
+      AppState.currentCourseId = id;
+      safeWrite(db.ref("courses/" + id).set({ name: name.trim(), order: nextOrder(AppState.courses) }), "과정 추가에 실패했습니다.");
+      logActivity('과정 "' + name.trim() + '" 추가');
+    }
+
+    /* =========================================================
+       토스트 알림 & 안전한 Firebase 쓰기
+       ========================================================= */
+    // type: "error"(기본) | "success"
+    function showToast(message, type) {
+      let area = document.getElementById("toast-area");
+      if (!area) {
+        area = document.createElement("div");
+        area.id = "toast-area";
+        area.className = "toast-area";
+        document.body.appendChild(area);
+      }
+      const t = document.createElement("div");
+      t.className = "toast " + (type === "success" ? "success" : "error");
+      t.textContent = message;
+      area.appendChild(t);
+      setTimeout(function () {
+        t.classList.add("hide");
+        setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 300);
+      }, 3200);
+    }
+
+    // Firebase 쓰기 Promise를 받아 실패 시 빨간 토스트 표시
+    function safeWrite(promise, errMsg) {
+      if (promise && typeof promise.then === "function") {
+        promise.then(null, function (err) {
+          console.error("[Firebase] 저장 실패", err);
+          showToast(errMsg || ("저장 실패: " + (err && err.message ? err.message : err)));
+        });
+      }
+      return promise;
+    }
+
+    /* =========================================================
+       설정 드로어 (슬라이드 패널 + 탭)
+       ========================================================= */
+    let isSettingsOpen = false;
+    let escHandler = null;
+    const SettingsUI = { tab: "courses", mentorCourseId: null, delCourseId: null };
+
+    function entriesByCourse(map, courseId) {
+      return sortedEntries(map).filter(function (e) { return e[1].courseId === courseId; });
+    }
+    function delsByStage(stageId) {
+      return sortedEntries(AppState.deliverables).filter(function (e) { return e[1].stageId === stageId; });
+    }
+    function nextOrderList(entries) {
+      const vals = entries.map(function (e) { return e[1].order || 0; });
+      return vals.length ? Math.max.apply(null, vals) + 1 : 1;
+    }
+    // 선택된 과정이 유효한지 확인하고, 없으면 대체 과정으로 보정
+    function validCourseId(pref) {
+      if (pref && AppState.courses[pref]) return pref;
+      if (AppState.currentCourseId && AppState.courses[AppState.currentCourseId]) return AppState.currentCourseId;
+      const s = sortedEntries(AppState.courses);
+      return s.length ? s[0][0] : null;
+    }
+
+    function openSettings() {
+      if (isSettingsOpen) return;
+      isSettingsOpen = true;
+      SettingsUI.mentorCourseId = validCourseId(SettingsUI.mentorCourseId);
+      SettingsUI.delCourseId = validCourseId(SettingsUI.delCourseId);
+
+      const root = document.getElementById("modal-root");
+      root.innerHTML =
+        '<div class="set-overlay" id="set-overlay">' +
+          '<aside class="set-drawer" role="dialog" aria-label="설정">' +
+            '<div class="set-head"><h2>⚙️ 설정</h2><button class="icon-btn" id="set-close">✕</button></div>' +
+            '<div class="set-tabbar" id="set-tabbar">' +
+              '<button class="set-tab" data-tab="courses">과정 관리</button>' +
+              '<button class="set-tab" data-tab="mentors">멘토 관리</button>' +
+              '<button class="set-tab" data-tab="deliverables">산출물 관리</button>' +
+            '</div>' +
+            '<div class="set-body" id="set-body"></div>' +
+          '</aside>' +
+        '</div>';
+
+      // 탭 전환 (1회 바인딩)
+      document.getElementById("set-tabbar").querySelectorAll(".set-tab").forEach(function (t) {
+        t.addEventListener("click", function () {
+          SettingsUI.tab = t.getAttribute("data-tab");
+          renderSettingsContent();
+        });
+      });
+      // 닫기
+      document.getElementById("set-close").addEventListener("click", closeSettings);
+      const overlay = document.getElementById("set-overlay");
+      overlay.addEventListener("click", function (e) { if (e.target === overlay) closeSettings(); });
+      escHandler = function (e) { if (e.key === "Escape") closeSettings(); };
+      document.addEventListener("keydown", escHandler);
+
+      renderSettingsContent();
+      // 슬라이드 인 애니메이션
+      requestAnimationFrame(function () { overlay.classList.add("open"); });
+    }
+
+    function closeSettings() {
+      if (escHandler) { document.removeEventListener("keydown", escHandler); escHandler = null; }
+      isSettingsOpen = false;
+      const overlay = document.getElementById("set-overlay");
+      if (!overlay) { document.getElementById("modal-root").innerHTML = ""; return; }
+      overlay.classList.remove("open");
+      setTimeout(function () { document.getElementById("modal-root").innerHTML = ""; }, 300);
+    }
+
+    // 데이터 변경 시 설정 패널 갱신 (단, 입력 중이면 보류)
+    function maybeRefreshSettings() {
+      if (!isSettingsOpen) return;
+      const body = document.getElementById("set-body");
+      const ae = document.activeElement;
+      if (body && ae && body.contains(ae) && ae.tagName === "INPUT") return;
+      renderSettingsContent();
+    }
+
+    function renderSettingsContent() {
+      if (!isSettingsOpen) return;
+      const body = document.getElementById("set-body");
+      if (!body) return;
+      SettingsUI.mentorCourseId = validCourseId(SettingsUI.mentorCourseId);
+      SettingsUI.delCourseId = validCourseId(SettingsUI.delCourseId);
+
+      document.getElementById("set-tabbar").querySelectorAll(".set-tab").forEach(function (t) {
+        t.classList.toggle("active", t.getAttribute("data-tab") === SettingsUI.tab);
+      });
+
+      let html;
+      if (SettingsUI.tab === "mentors") html = mentorsTabHtml();
+      else if (SettingsUI.tab === "deliverables") html = deliverablesTabHtml();
+      else html = coursesTabHtml();
+      body.innerHTML = html;
+      bindSettingsEvents(body);
+    }
+
+    // 이름 변경용 input HTML 생성
+    function nameInput(path, id, value) {
+      const v = escapeHtml(value);
+      return '<input type="text" class="name-input" data-act="rename" data-path="' + path +
+        '" data-id="' + id + '" data-prev="' + v + '" value="' + v + '" />';
+    }
+    // 과정 선택 드롭다운
+    function courseSelect(cid, target) {
+      const opts = sortedEntries(AppState.courses).map(function (e) {
+        return '<option value="' + e[0] + '"' + (e[0] === cid ? ' selected' : '') + '>' +
+          escapeHtml(e[1].name) + '</option>';
+      }).join("");
+      return '<select class="course-select" data-act="select-course" data-target="' + target + '">' + opts + '</select>';
+    }
+
+    /* ----- 탭 1: 과정 관리 ----- */
+    function coursesTabHtml() {
+      const courses = sortedEntries(AppState.courses);
+      const atMax = courses.length >= 5;
+      let h = '<p class="set-hint">과정 (' + courses.length + '/5)</p>';
+      if (courses.length === 0) h += '<div class="set-empty">등록된 과정이 없습니다.</div>';
+      courses.forEach(function (e) {
+        const id = e[0], c = e[1];
+        h += '<div class="set-row">' + nameInput("courses", id, c.name) +
+          '<button class="del-btn" data-act="del-course" data-id="' + id + '">삭제</button></div>';
+      });
+      h += '<button class="add-btn" data-act="add-course"' +
+        (atMax ? ' disabled title="과정은 최대 5개까지 추가할 수 있습니다."' : '') +
+        '>+ 과정 추가</button>';
+      return h;
+    }
+
+    /* ----- 탭 2: 멘토 관리 ----- */
+    function mentorsTabHtml() {
+      const courses = sortedEntries(AppState.courses);
+      if (courses.length === 0) return '<div class="set-empty">먼저 \'과정 관리\'에서 과정을 추가하세요.</div>';
+      const cid = SettingsUI.mentorCourseId;
+      let h = courseSelect(cid, "mentor");
+      const list = entriesByCourse(AppState.mentors, cid);
+      const atMax = list.length >= 6;
+      h += '<p class="set-hint">멘토 (' + list.length + '/6)</p>';
+      if (list.length === 0) h += '<div class="set-empty">등록된 멘토가 없습니다.</div>';
+      list.forEach(function (e, idx) {
+        const id = e[0], m = e[1];
+        h += '<div class="set-row"><span class="ord">' + (idx + 1) + '</span>' +
+          nameInput("mentors", id, m.name) +
+          '<button class="del-btn" data-act="del-mentor" data-id="' + id + '">삭제</button></div>';
+      });
+      h += '<button class="add-btn" data-act="add-mentor" data-course="' + cid + '"' +
+        (atMax ? ' disabled title="멘토는 과정당 최대 6명까지 추가할 수 있습니다."' : '') +
+        '>+ 멘토 추가</button>';
+      return h;
+    }
+
+    /* ----- 탭 3: 산출물 관리 ----- */
+    function deliverablesTabHtml() {
+      const courses = sortedEntries(AppState.courses);
+      if (courses.length === 0) return '<div class="set-empty">먼저 \'과정 관리\'에서 과정을 추가하세요.</div>';
+      const cid = SettingsUI.delCourseId;
+      let h = courseSelect(cid, "del");
+      const stages = entriesByCourse(AppState.stages, cid);
+      const stageMax = stages.length >= 5;
+      h += '<p class="set-hint">단계 (' + stages.length + '/5) · 단계당 산출물 최대 6개</p>';
+      if (stages.length === 0) h += '<div class="set-empty">등록된 단계가 없습니다.</div>';
+      stages.forEach(function (sEntry) {
+        const sid = sEntry[0], s = sEntry[1];
+        const dels = delsByStage(sid);
+        const delMax = dels.length >= 6;
+        h += '<div class="set-stage-card">';
+        h += '<div class="set-stage-head">' + nameInput("stages", sid, s.name) +
+          '<button class="add-btn sm" data-act="add-del" data-stage="' + sid + '"' +
+            (delMax ? ' disabled title="산출물은 단계당 최대 6개까지 추가할 수 있습니다."' : '') +
+            '>+ 산출물</button>' +
+          '<button class="del-btn" data-act="del-stage" data-id="' + sid + '">단계 삭제</button>' +
+          '</div>';
+        dels.forEach(function (d) {
+          h += '<div class="deliv-row"><span class="bullet">·</span>' +
+            nameInput("deliverables", d[0], d[1].name) +
+            '<button class="del-btn" data-act="del-del" data-id="' + d[0] + '">삭제</button></div>';
+        });
+        h += '</div>';
+      });
+      h += '<button class="add-btn" data-act="add-stage" data-course="' + cid + '"' +
+        (stageMax ? ' disabled title="단계는 과정당 최대 5개까지 추가할 수 있습니다."' : '') +
+        '>+ 단계 추가</button>';
+      return h;
+    }
+
+    /* ----- 이벤트 바인딩 ----- */
+    function bindSettingsEvents(container) {
+      // 이름 input: 변경 시 즉시 반영, 공백이면 복원
+      container.querySelectorAll('input[data-act="rename"]').forEach(function (inp) {
+        inp.addEventListener("change", function () { handleRename(inp); });
+      });
+      // 과정 선택 드롭다운
+      container.querySelectorAll('select[data-act="select-course"]').forEach(function (sel) {
+        sel.addEventListener("change", function () {
+          if (sel.getAttribute("data-target") === "mentor") SettingsUI.mentorCourseId = sel.value;
+          else SettingsUI.delCourseId = sel.value;
+          renderSettingsContent();
+        });
+      });
+      // 버튼 액션
+      container.querySelectorAll("button[data-act]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          settingsButtonAction(btn.getAttribute("data-act"), btn);
+        });
+      });
+    }
+
+    function handleRename(input) {
+      const prev = input.getAttribute("data-prev");
+      const v = (input.value || "").trim();
+      if (!v) { input.value = prev; return; }          // 빈 이름 방지: 이전 값 복원
+      if (v === prev) { input.value = v; return; }
+      const path = input.getAttribute("data-path");
+      const id = input.getAttribute("data-id");
+      input.setAttribute("data-prev", v);
+      input.value = v;
+      safeWrite(db.ref(path + "/" + id + "/name").set(v), "이름 저장에 실패했습니다.");
+      logActivity('이름 변경: "' + prev + '" → "' + v + '"');
+    }
+
+    function settingsButtonAction(act, btn) {
+      const id = btn.getAttribute("data-id");
+      switch (act) {
+        case "add-course": addCourseFromSettings(); break;
+        case "del-course": deleteCourse(id); break;
+        case "add-mentor": addMentor(btn.getAttribute("data-course")); break;
+        case "del-mentor": deleteMentor(id); break;
+        case "add-stage": addStage(btn.getAttribute("data-course")); break;
+        case "del-stage": deleteStage(id); break;
+        case "add-del": addDeliverable(btn.getAttribute("data-stage")); break;
+        case "del-del": deleteDeliverable(id); break;
+      }
+    }
+
+    /* =========================================================
+       추가 (기본 이름으로 생성 → 인라인 편집)
+       ========================================================= */
+    function addCourseFromSettings() {
+      if (Object.keys(AppState.courses).length >= 5) {
+        showToast("과정은 최대 5개까지 추가할 수 있습니다.");
+        return;
+      }
+      const id = genId("course");
+      safeWrite(db.ref("courses/" + id).set({ name: "새 과정", order: nextOrder(AppState.courses) }), "과정 추가에 실패했습니다.");
+      logActivity("과정 추가");
+    }
+
+    function addMentor(courseId) {
+      const list = entriesByCourse(AppState.mentors, courseId);
+      if (list.length >= 6) {
+        showToast("멘토는 과정당 최대 6명까지 추가할 수 있습니다.");
+        return;
+      }
+      const id = genId("mentor");
+      safeWrite(db.ref("mentors/" + id).set({ courseId: courseId, name: "새 멘토", order: nextOrderList(list) }), "멘토 추가에 실패했습니다.");
+      logActivity("멘토 추가");
+    }
+
+    function addStage(courseId) {
+      const list = entriesByCourse(AppState.stages, courseId);
+      if (list.length >= 5) {
+        showToast("단계는 과정당 최대 5개까지 추가할 수 있습니다.");
+        return;
+      }
+      const id = genId("stage");
+      safeWrite(db.ref("stages/" + id).set({ courseId: courseId, name: "새 단계", order: nextOrderList(list) }), "단계 추가에 실패했습니다.");
+      logActivity("단계 추가");
+    }
+
+    function addDeliverable(stageId) {
+      const list = delsByStage(stageId);
+      if (list.length >= 6) {
+        showToast("산출물은 단계당 최대 6개까지 추가할 수 있습니다.");
+        return;
+      }
+      const id = genId("del");
+      safeWrite(db.ref("deliverables/" + id).set({ stageId: stageId, name: "새 산출물", order: nextOrderList(list) }), "산출물 추가에 실패했습니다.");
+      logActivity("산출물 추가");
+    }
+
+    /* =========================================================
+       삭제 (모두 window.confirm 2차 확인 + 연관 데이터 정리)
+       ========================================================= */
+    function deleteCourse(id) {
+      if (!window.confirm("이 과정을 삭제하면 관련 모든 데이터가 삭제됩니다. 계속하시겠습니까?")) return;
+      const name = (AppState.courses[id] || {}).name || id;
+      const updates = {};
+      updates["courses/" + id] = null;
+      // 멘토 + 멘토 관련 체크 상태
+      Object.keys(AppState.mentors).forEach(function (k) {
+        if (AppState.mentors[k].courseId === id) {
+          updates["mentors/" + k] = null;
+          Object.keys(AppState.checkStatus).forEach(function (ck) {
+            if (ck.indexOf(k + "_") === 0) updates["checkStatus/" + ck] = null;
+          });
+        }
+      });
+      // 단계 + 산출물 + 산출물 관련 체크 상태
+      Object.keys(AppState.stages).forEach(function (sid) {
+        if (AppState.stages[sid].courseId !== id) return;
+        updates["stages/" + sid] = null;
+        Object.keys(AppState.deliverables).forEach(function (dk) {
+          if (AppState.deliverables[dk].stageId !== sid) return;
+          updates["deliverables/" + dk] = null;
+          Object.keys(AppState.checkStatus).forEach(function (ck) {
+            if (ck.lastIndexOf("_" + dk) === ck.length - dk.length - 1) updates["checkStatus/" + ck] = null;
+          });
+        });
+      });
+      if (AppState.currentCourseId === id) AppState.currentCourseId = null;
+      if (SettingsUI.mentorCourseId === id) SettingsUI.mentorCourseId = null;
+      if (SettingsUI.delCourseId === id) SettingsUI.delCourseId = null;
+      safeWrite(db.ref().update(updates), "과정 삭제에 실패했습니다.");
+      logActivity('과정 "' + name + '" 삭제');
+    }
+
+    function deleteMentor(id) {
+      const name = (AppState.mentors[id] || {}).name || id;
+      if (!window.confirm('멘토 "' + name + '"를 삭제하시겠습니까?')) return;
+      const updates = {};
+      updates["mentors/" + id] = null;
+      Object.keys(AppState.checkStatus).forEach(function (ck) {
+        if (ck.indexOf(id + "_") === 0) updates["checkStatus/" + ck] = null;
+      });
+      safeWrite(db.ref().update(updates), "멘토 삭제에 실패했습니다.");
+      logActivity('멘토 "' + name + '" 삭제');
+    }
+
+    function deleteStage(id) {
+      const name = (AppState.stages[id] || {}).name || id;
+      if (!window.confirm('단계 "' + name + '" 및 소속 산출물을 삭제하시겠습니까?')) return;
+      const updates = {};
+      updates["stages/" + id] = null;
+      const delIds = [];
+      Object.keys(AppState.deliverables).forEach(function (dk) {
+        if (AppState.deliverables[dk].stageId === id) { updates["deliverables/" + dk] = null; delIds.push(dk); }
+      });
+      // 해당 산출물들의 체크 상태도 제거 (키: {mentorId}_{deliverableId})
+      delIds.forEach(function (did) {
+        Object.keys(AppState.checkStatus).forEach(function (ck) {
+          if (ck.lastIndexOf("_" + did) === ck.length - did.length - 1) updates["checkStatus/" + ck] = null;
+        });
+      });
+      safeWrite(db.ref().update(updates), "단계 삭제에 실패했습니다.");
+      logActivity('단계 "' + name + '" 삭제');
+    }
+
+    function deleteDeliverable(id) {
+      const name = (AppState.deliverables[id] || {}).name || id;
+      if (!window.confirm('산출물 "' + name + '"를 삭제하시겠습니까?')) return;
+      const updates = {};
+      updates["deliverables/" + id] = null;
+      Object.keys(AppState.checkStatus).forEach(function (ck) {
+        if (ck.lastIndexOf("_" + id) === ck.length - id.length - 1) updates["checkStatus/" + ck] = null;
+      });
+      safeWrite(db.ref().update(updates), "산출물 삭제에 실패했습니다.");
+      logActivity('산출물 "' + name + '" 삭제');
+    }
+
+    /* =========================================================
+       시작
+       ========================================================= */
+    document.getElementById("settings-btn").addEventListener("click", openSettings);
+
+    monitorConnection();
+    seedIfEmpty().then(subscribeAll).catch(function (err) {
+      console.error("[Firebase] 시드/구독 시작 오류", err);
+      subscribeAll();
+    });
+  </script>
+</body>
+</html>
