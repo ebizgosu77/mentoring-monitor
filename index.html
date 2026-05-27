@@ -862,6 +862,13 @@
     .js-stat.done { background: rgba(0, 212, 160, 0.12); color: var(--color-success); border-color: var(--color-success); }
     .js-stat.missing { background: rgba(255, 77, 109, 0.12); color: var(--color-danger); border-color: var(--color-danger); }
     .js-stat.unchecked { background: rgba(255, 255, 255, 0.04); color: var(--text-secondary); }
+    .js-stat.rate {
+      background: linear-gradient(135deg, #00D4FF22, #7B2FBE22);
+      color: var(--color-cyan); border-color: var(--border-cyan); font-weight: 700;
+    }
+    .js-sep { color: var(--text-muted); align-self: center; }
+    .journal-hint { color: var(--text-muted); font-size: 12px; }
+    .journal-toolbar .journal-hint { margin-left: auto; }
 
     /* ----- 빈 상태 ----- */
     .empty-state { color: var(--text-muted); }
@@ -1397,18 +1404,22 @@
         h += '<div class="jdate-add-row">' +
           '<input type="date" id="jdate-input" value="' + todayStr() + '" />' +
           '<button class="mini-btn primary" id="jdate-save">확인</button>' +
-          '<button class="mini-btn" id="jdate-cancel">취소</button></div>';
+          '<button class="mini-btn" id="jdate-cancel">취소</button>' +
+          '<span class="journal-hint">멘토링을 수행한 날짜만 추가하세요</span></div>';
       } else {
         h += '<div class="journal-toolbar">' +
           '<button class="mini-btn primary" id="jdate-add-btn"' +
           (atMax ? ' disabled title="멘토당 최대 30개까지 추가할 수 있습니다."' : '') +
           '>+ 날짜 추가</button>' +
-          '<span class="journal-count">' + count + '/' + JOURNAL_MAX + '</span></div>';
+          '<span class="journal-count">' + count + '/' + JOURNAL_MAX + '</span>' +
+          '<span class="journal-hint">멘토링을 수행한 날짜만 추가하세요</span></div>';
       }
 
       // 현황 테이블
       if (count === 0) {
         h += '<div class="set-empty">추가된 날짜가 없습니다. \'+ 날짜 추가\'로 시작하세요.</div>';
+        // 등록된 날짜 0개
+        h += '<div class="journal-summary"><span class="js-stat unchecked">등록된 날짜 없음</span></div>';
       } else {
         let done = 0, missing = 0, unchecked = 0;
         h += '<div class="table-wrap"><table class="matrix journal-table"><thead><tr>' +
@@ -1427,11 +1438,14 @@
         });
         h += '</tbody></table></div>';
 
-        // 멘토별 요약
+        // 멘토별 요약 + 제출률 (= 작성완료 / 전체 등록 날짜)
+        const rate = Math.round(done / count * 100);
         h += '<div class="journal-summary">' +
           '<span class="js-stat done">작성완료 ' + done + '건</span>' +
           '<span class="js-stat missing">미작성 ' + missing + '건</span>' +
           '<span class="js-stat unchecked">미확인 ' + unchecked + '건</span>' +
+          '<span class="js-sep">|</span>' +
+          '<span class="js-stat rate">제출률 ' + rate + '%</span>' +
           '</div>';
       }
 
