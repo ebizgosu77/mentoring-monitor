@@ -598,6 +598,15 @@
     }
     .icon-btn:hover { background: rgba(0, 212, 255, 0.1); }
 
+    /* 데이터 로드 실패 배너 */
+    #data-error-banner {
+      background: rgba(255, 77, 109, 0.12);
+      border-bottom: 1px solid var(--color-danger);
+      color: var(--color-danger);
+      padding: 12px 20px; font-size: 13px; text-align: center;
+    }
+    #data-error-banner b { color: var(--color-danger); }
+
     /* ----- 연결 배지 ----- */
     .conn-badge { border: 1px solid transparent; border-radius: 20px; }
     .conn-badge.online {
@@ -919,8 +928,32 @@
           }
         }, function (err) {
           console.error("[Firebase] 구독 오류 (" + path + ")", err);
+          // 오류가 나도 해당 경로를 '로드됨(빈 값)'으로 처리해 렌더링이 멈추지 않게 함
+          AppState[path] = {};
+          loadedFlags[path] = true;
+          showDataErrorBanner(err);
+          if (allLoaded()) {
+            ensureCurrentCourse();
+            renderApp();
+          }
         });
       });
+    }
+
+    // 데이터 로드 실패 시 헤더 아래에 영구 배너 표시 (한 번만)
+    let dataErrorBannerShown = false;
+    function showDataErrorBanner(err) {
+      if (dataErrorBannerShown) return;
+      dataErrorBannerShown = true;
+      const isPerm = err && (err.code === "PERMISSION_DENIED" ||
+        /permission/i.test((err.message || "") + (err.code || "")));
+      const banner = document.createElement("div");
+      banner.id = "data-error-banner";
+      banner.innerHTML = isPerm
+        ? "⚠️ <b>데이터 읽기 권한이 없습니다.</b> Firebase Console → Realtime Database → 규칙에서 읽기/쓰기를 허용하세요."
+        : "⚠️ 데이터를 불러오지 못했습니다: " + escapeHtml(err && err.message ? err.message : String(err));
+      const header = document.querySelector("header");
+      if (header && header.parentNode) header.parentNode.insertBefore(banner, header.nextSibling);
     }
 
     /* =========================================================
