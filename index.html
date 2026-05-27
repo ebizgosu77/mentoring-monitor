@@ -826,45 +826,42 @@
     .ji-checker::placeholder { color: rgba(0, 212, 255, 0.5); }
     .ji-meta { color: var(--text-muted); }
 
-    /* ----- 수행일지: 날짜별 제출 현황 매트릭스 ----- */
-    .jdate-add { display: inline-flex; align-items: center; gap: 6px; }
-    .jdate-add #jdate-input {
+    /* ----- 수행일지: 멘토별 개별 날짜 관리 ----- */
+    .journal-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .jdate-add-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+    #jdate-input {
       background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color);
-      color: var(--text-primary); border-radius: 6px; padding: 6px 8px; font-size: 13px;
+      color: var(--text-primary); border-radius: 6px; padding: 8px 10px; font-size: 14px;
     }
-    table.journal-matrix .jdate-head {
-      background: rgba(0, 212, 255, 0.08); color: var(--color-cyan);
-      font-size: 12px; white-space: nowrap; position: relative;
-    }
-    .jdate-del {
-      margin-left: 6px; border: none; background: transparent;
-      color: var(--text-muted); font-size: 11px; line-height: 1; padding: 2px 4px; border-radius: 4px;
-    }
-    .jdate-del:hover { color: var(--color-danger); background: rgba(255, 77, 109, 0.12); }
+    #jdate-input:focus { outline: none; border-color: var(--color-cyan); box-shadow: 0 0 8px rgba(0, 212, 255, 0.2); }
 
-    td.jcell { cursor: pointer; user-select: none; text-align: center; min-width: 64px; transition: background 0.12s; }
-    td.jcell .jmark { font-size: 16px; font-weight: 700; }
-    td.jcell.none { background: rgba(255, 255, 255, 0.02); }
-    td.jcell.none .jmark { color: var(--text-muted); }
-    td.jcell.done { background: rgba(0, 212, 160, 0.18); }
-    td.jcell.done .jmark { color: var(--color-success); }
-    td.jcell.missing { background: rgba(255, 77, 109, 0.16); }
-    td.jcell.missing .jmark { color: var(--color-danger); }
-    td.jcell:hover { filter: brightness(1.25); }
-    .cell-note {
-      position: absolute; margin-left: 3px; margin-top: -8px;
-      color: var(--color-cyan); font-size: 10px;
-    }
-    td.jcell { position: relative; }
+    table.journal-table th, table.journal-table td { padding: 9px 12px; }
+    .jdate-cell { color: var(--color-cyan); font-weight: 600; white-space: nowrap; }
 
-    .journal-summary { display: flex; flex-wrap: wrap; gap: 24px; margin-top: 16px; }
-    .js-block { flex: 1; min-width: 220px; }
-    .js-block h4 {
-      margin: 0 0 8px; font-size: 13px; color: var(--color-cyan);
-      border-left: 3px solid var(--color-cyan); padding-left: 8px;
+    td.jstatus {
+      cursor: pointer; user-select: none; font-weight: 600; font-size: 13px;
+      white-space: nowrap; transition: filter 0.12s;
     }
-    .js-item { font-size: 13px; color: var(--text-secondary); padding: 3px 0 3px 11px; }
-    .js-item b { color: var(--color-cyan); }
+    td.jstatus:hover { filter: brightness(1.25); }
+    td.jstatus.unchecked { background: rgba(255, 255, 255, 0.03); color: var(--text-muted); }
+    td.jstatus.done { background: rgba(0, 212, 160, 0.2); color: var(--color-success); }
+    td.jstatus.missing { background: rgba(255, 77, 109, 0.18); color: var(--color-danger); }
+
+    .jnote-input {
+      width: 100%; box-sizing: border-box;
+      background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color);
+      color: var(--text-primary); border-radius: 6px; padding: 6px 9px; font-size: 13px; font-family: inherit;
+    }
+    .jnote-input:focus { outline: none; border-color: var(--color-cyan); box-shadow: 0 0 8px rgba(0, 212, 255, 0.2); }
+
+    .journal-summary { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .js-stat {
+      font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 20px;
+      border: 1px solid var(--border-color);
+    }
+    .js-stat.done { background: rgba(0, 212, 160, 0.12); color: var(--color-success); border-color: var(--color-success); }
+    .js-stat.missing { background: rgba(255, 77, 109, 0.12); color: var(--color-danger); border-color: var(--color-danger); }
+    .js-stat.unchecked { background: rgba(255, 255, 255, 0.04); color: var(--text-secondary); }
 
     /* ----- 빈 상태 ----- */
     .empty-state { color: var(--text-muted); }
@@ -961,7 +958,6 @@
       deliverables: {},
       checkStatus: {},
       activityLogs: {},
-      journalDates: {},
       currentCourseId: null
     };
 
@@ -988,8 +984,7 @@
         del3: { stageId: "stage2", name: "중간 보고서", order: 1 }
       },
       checkStatus: {},
-      activityLogs: {},
-      journalDates: {}
+      activityLogs: {}
     };
 
     /* =========================================================
@@ -1009,7 +1004,7 @@
     /* =========================================================
        데이터 구독 (onValue)
        ========================================================= */
-    const SUBSCRIBE_PATHS = ["courses", "mentors", "stages", "deliverables", "checkStatus", "activityLogs", "journalDates"];
+    const SUBSCRIBE_PATHS = ["courses", "mentors", "stages", "deliverables", "checkStatus", "activityLogs"];
     const loadedFlags = {};
     SUBSCRIBE_PATHS.forEach(function (p) { loadedFlags[p] = false; });
 
@@ -1157,6 +1152,7 @@
        ========================================================= */
     // 렌더 상태 (Firebase 미러가 아닌 UI 로컬 상태)
     let mainCourseRendered = null;   // 현재 골격이 그려진 과정 id
+    let journalMentorId = null;      // 수행일지에서 선택된 멘토
     let journalDateAdding = false;   // 수행일지 날짜 추가 입력 열림 여부
 
     function renderApp() {
@@ -1205,6 +1201,7 @@
           '<div id="check-area"></div>' +
           '<div id="journal-area"></div>';
         mainCourseRendered = courseId;
+        journalMentorId = null;    // 과정 전환 시 멘토 선택 초기화
         journalDateAdding = false; // 과정 전환 시 날짜 추가 입력 초기화
       }
 
@@ -1324,35 +1321,37 @@
     }
 
     /* =========================================================
-       수행일지 — 날짜별 제출 현황 (멘토 × 날짜 매트릭스)
-         날짜 목록:  journalDates/{courseId}/{date} = true
-         셀 데이터:  activityLogs/{mentorId}/{date} =
-                       { date, submitted, note, checkedAt, checkedBy }
+       수행일지 — 멘토별 개별 날짜 관리
+         activityLogs/{mentorId}/{date} =
+           { date, submitted: "unchecked"|"done"|"missing", note, updatedAt }
+         (날짜 문자열을 키로 사용 → 같은 날짜 중복 방지)
        ========================================================= */
+    const JOURNAL_MAX = 30;
+
     function todayStr() {
       const d = new Date();
       const pad = function (n) { return n < 10 ? "0" + n : "" + n; };
       return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
     }
 
-    // 과정의 날짜 목록 (내림차순 = 최신순)
-    function courseDates(courseId) {
-      const o = (AppState.journalDates && AppState.journalDates[courseId]) || {};
-      return Object.keys(o).sort(function (a, b) { return a < b ? 1 : (a > b ? -1 : 0); });
+    // 멘토의 일지 항목 목록 ([logId, rec]), 날짜 내림차순(최신순)
+    function journalEntries(mentorId) {
+      const o = (AppState.activityLogs && AppState.activityLogs[mentorId]) || {};
+      return Object.keys(o).map(function (id) { return [id, o[id]]; })
+        .sort(function (a, b) {
+          const da = a[1].date || a[0], db_ = b[1].date || b[0];
+          return da < db_ ? 1 : (da > db_ ? -1 : 0);
+        });
     }
-    function journalRec(mentorId, date) {
-      const m = AppState.activityLogs && AppState.activityLogs[mentorId];
-      return (m && m[date]) || null;
-    }
-    // "done"(작성완료) | "missing"(미작성) | "none"(미확인)
-    function journalState(mentorId, date) {
-      const r = journalRec(mentorId, date);
-      if (r && r.submitted === true) return "done";
-      if (r && r.submitted === false) return "missing";
-      return "none";
+    // 상태 정규화 (구버전 boolean 데이터도 호환)
+    function normSubmitted(rec) {
+      const s = rec && rec.submitted;
+      if (s === "done" || s === true) return "done";
+      if (s === "missing" || s === false) return "missing";
+      return "unchecked";
     }
 
-    // force=true 면 항상 다시 그림. false 면 날짜 입력 중/포커스 시 보존.
+    // force=true 면 항상 다시 그림. false 면 입력 중(날짜추가/메모 포커스)일 때 보존.
     function renderJournal(courseId, force) {
       const area = document.getElementById("journal-area");
       if (!area) return;
@@ -1367,81 +1366,74 @@
 
     function renderJournalHtml(courseId) {
       const mentors = entriesByCourse(AppState.mentors, courseId);
-      const dates = courseDates(courseId);
 
       let h = '<div class="journal-section">';
-      h += '<div class="journal-head"><h3>📒 수행일지 제출 현황</h3>';
-      if (journalDateAdding) {
-        h += '<span class="jdate-add">' +
-          '<input type="date" id="jdate-input" value="' + todayStr() + '" />' +
-          '<button class="mini-btn primary" id="jdate-save">추가</button>' +
-          '<button class="mini-btn" id="jdate-cancel">취소</button></span>';
-      } else {
-        h += '<button class="mini-btn primary" id="jdate-add-btn">+ 날짜 추가</button>';
-      }
-      h += '</div>';
+      h += '<div class="journal-head"><h3>📒 수행일지</h3></div>';
 
       if (mentors.length === 0) {
         return h + '<div class="set-empty">설정에서 멘토를 먼저 추가하세요.</div></div>';
       }
-      if (dates.length === 0) {
-        return h + '<div class="set-empty">상단 \'+ 날짜 추가\'로 점검할 날짜를 추가하세요.</div></div>';
+
+      // 멘토 선택 유효성 보정 (기본: 첫 번째 멘토)
+      if (!journalMentorId || !mentors.some(function (e) { return e[0] === journalMentorId; })) {
+        journalMentorId = mentors[0][0];
+      }
+      const mid = journalMentorId;
+
+      // 멘토 탭
+      h += '<div class="journal-mentor-tabs">';
+      mentors.forEach(function (e) {
+        h += '<button class="jm-tab' + (e[0] === mid ? ' active' : '') + '" data-jmentor="' + e[0] + '">' +
+          escapeHtml(e[1].name) + '</button>';
+      });
+      h += '</div>';
+
+      const entries = journalEntries(mid);
+      const count = entries.length;
+      const atMax = count >= JOURNAL_MAX;
+
+      // 날짜 추가 도구
+      if (journalDateAdding) {
+        h += '<div class="jdate-add-row">' +
+          '<input type="date" id="jdate-input" value="' + todayStr() + '" />' +
+          '<button class="mini-btn primary" id="jdate-save">확인</button>' +
+          '<button class="mini-btn" id="jdate-cancel">취소</button></div>';
+      } else {
+        h += '<div class="journal-toolbar">' +
+          '<button class="mini-btn primary" id="jdate-add-btn"' +
+          (atMax ? ' disabled title="멘토당 최대 30개까지 추가할 수 있습니다."' : '') +
+          '>+ 날짜 추가</button>' +
+          '<span class="journal-count">' + count + '/' + JOURNAL_MAX + '</span></div>';
       }
 
-      // ----- 매트릭스 표 -----
-      h += '<div class="table-wrap"><table class="matrix journal-matrix"><thead><tr>';
-      h += '<th class="corner">멘토 \\ 날짜</th>';
-      dates.forEach(function (d) {
-        h += '<th class="jdate-head">' + escapeHtml(d) +
-          '<button class="jdate-del" data-jdate-del="' + escapeHtml(d) + '" title="날짜 삭제">✕</button></th>';
-      });
-      h += '<th class="rate-head">제출률</th></tr></thead><tbody>';
-
-      mentors.forEach(function (mEntry) {
-        const mid = mEntry[0], mentor = mEntry[1];
-        let doneCount = 0, cells = "";
-        dates.forEach(function (d) {
-          const st = journalState(mid, d);
-          if (st === "done") doneCount++;
-          const rec = journalRec(mid, d);
-          const noteMark = (rec && rec.note) ? '<span class="cell-note" title="' + escapeHtml(rec.note) + '">✎</span>' : '';
-          const mark = st === "done" ? "✓" : (st === "missing" ? "✗" : "−");
-          cells += '<td class="jcell ' + st + '" data-mentor="' + mid + '" data-date="' + escapeHtml(d) + '">' +
-            '<span class="jmark">' + mark + '</span>' + noteMark + '</td>';
+      // 현황 테이블
+      if (count === 0) {
+        h += '<div class="set-empty">추가된 날짜가 없습니다. \'+ 날짜 추가\'로 시작하세요.</div>';
+      } else {
+        let done = 0, missing = 0, unchecked = 0;
+        h += '<div class="table-wrap"><table class="matrix journal-table"><thead><tr>' +
+          '<th>날짜</th><th>제출여부</th><th>메모</th><th>삭제</th></tr></thead><tbody>';
+        entries.forEach(function (entry) {
+          const lid = entry[0], rec = entry[1];
+          const st = normSubmitted(rec);
+          if (st === "done") done++; else if (st === "missing") missing++; else unchecked++;
+          const label = st === "done" ? "✓ 작성완료" : (st === "missing" ? "✗ 미작성" : "−");
+          h += '<tr>' +
+            '<td class="jdate-cell">' + escapeHtml(rec.date || lid) + '</td>' +
+            '<td class="jstatus ' + st + '" data-jstatus data-jid="' + escapeHtml(lid) + '" title="클릭하여 상태 변경">' + label + '</td>' +
+            '<td><input type="text" class="jnote-input" data-jnote data-jid="' + escapeHtml(lid) + '" value="' + escapeHtml(rec.note || "") + '" placeholder="메모 입력" /></td>' +
+            '<td><button class="del-btn" data-jdel="' + escapeHtml(lid) + '">삭제</button></td>' +
+          '</tr>';
         });
-        const pct = dates.length ? Math.round(doneCount / dates.length * 100) : 0;
-        cells += '<td class="mentor-total"><div class="rate-cell">' +
-          '<span class="rate-num">' + doneCount + '/' + dates.length + ' · ' + pct + '%</span>' +
-          '<div class="rate-bar"><span style="width:' + pct + '%"></span></div></div></td>';
-        h += '<tr><td class="mentor-cell">' + escapeHtml(mentor.name) + '</td>' + cells + '</tr>';
-      });
-      h += '</tbody>';
+        h += '</tbody></table></div>';
 
-      // tfoot: 날짜별 제출 인원
-      h += '<tfoot><tr class="rate-row"><td class="rate-label">제출 인원</td>';
-      dates.forEach(function (d) {
-        let cnt = 0;
-        mentors.forEach(function (m) { if (journalState(m[0], d) === "done") cnt++; });
-        h += '<td>' + cnt + '/' + mentors.length + '명</td>';
-      });
-      h += '<td></td></tr></tfoot></table></div>';
-
-      // ----- 하단 요약 -----
-      h += '<div class="journal-summary">';
-      h += '<div class="js-block"><h4>멘토별 제출률</h4>';
-      mentors.forEach(function (m) {
-        let dc = 0;
-        dates.forEach(function (d) { if (journalState(m[0], d) === "done") dc++; });
-        const p = dates.length ? Math.round(dc / dates.length * 100) : 0;
-        h += '<div class="js-item">' + escapeHtml(m[1].name) + ': <b>' + dc + '/' + dates.length + '</b> (' + p + '%)</div>';
-      });
-      h += '</div><div class="js-block"><h4>날짜별 제출 현황</h4>';
-      dates.forEach(function (d) {
-        let cnt = 0;
-        mentors.forEach(function (m) { if (journalState(m[0], d) === "done") cnt++; });
-        h += '<div class="js-item">' + escapeHtml(d) + ': <b>' + cnt + '/' + mentors.length + '</b>명 제출</div>';
-      });
-      h += '</div></div>';
+        // 멘토별 요약
+        h += '<div class="journal-summary">' +
+          '<span class="js-stat done">작성완료 ' + done + '건</span>' +
+          '<span class="js-stat missing">미작성 ' + missing + '건</span>' +
+          '<span class="js-stat unchecked">미확인 ' + unchecked + '건</span>' +
+          '</div>';
+      }
 
       h += '</div>';
       return h;
@@ -1450,6 +1442,15 @@
     function bindJournalEvents(courseId) {
       const area = document.getElementById("journal-area");
       if (!area) return;
+
+      // 멘토 탭 전환
+      area.querySelectorAll(".jm-tab").forEach(function (t) {
+        t.addEventListener("click", function () {
+          journalMentorId = t.getAttribute("data-jmentor");
+          journalDateAdding = false;
+          renderJournal(courseId, true);
+        });
+      });
 
       // 날짜 추가 토글
       const addBtn = area.querySelector("#jdate-add-btn");
@@ -1462,7 +1463,7 @@
       const saveBtn = area.querySelector("#jdate-save");
       if (saveBtn) saveBtn.addEventListener("click", function () {
         const inp = document.getElementById("jdate-input");
-        addJournalDate(courseId, inp ? inp.value.trim() : "");
+        addJournalDate(courseId, journalMentorId, inp ? inp.value.trim() : "");
       });
       const cancelBtn = area.querySelector("#jdate-cancel");
       if (cancelBtn) cancelBtn.addEventListener("click", function () {
@@ -1470,82 +1471,69 @@
         renderJournal(courseId, true);
       });
 
-      // 날짜 삭제
-      area.querySelectorAll("[data-jdate-del]").forEach(function (b) {
-        b.addEventListener("click", function () {
-          deleteJournalDate(courseId, b.getAttribute("data-jdate-del"));
+      // 제출여부 셀 클릭 → 상태 순환
+      area.querySelectorAll("[data-jstatus]").forEach(function (cell) {
+        cell.addEventListener("click", function () {
+          cycleJournalStatus(journalMentorId, cell.getAttribute("data-jid"));
         });
       });
 
-      // 셀: 클릭(상태 순환), 우클릭/길게누름(메모)
-      area.querySelectorAll(".jcell").forEach(function (cell) {
-        const mid = cell.getAttribute("data-mentor");
-        const date = cell.getAttribute("data-date");
-        let lpTimer = null, longed = false;
-        cell.addEventListener("click", function () {
-          if (longed) { longed = false; return; }   // 길게누름 직후 클릭 무시
-          cycleJournalCell(mid, date);
+      // 메모: onblur 저장
+      area.querySelectorAll("[data-jnote]").forEach(function (inp) {
+        inp.addEventListener("blur", function () {
+          saveJournalNote(journalMentorId, inp.getAttribute("data-jid"), inp.value);
         });
-        cell.addEventListener("contextmenu", function (e) {
-          e.preventDefault();
-          editJournalNote(mid, date);
+      });
+
+      // 날짜(행) 삭제
+      area.querySelectorAll("[data-jdel]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          deleteJournalDate(journalMentorId, b.getAttribute("data-jdel"));
         });
-        cell.addEventListener("pointerdown", function () {
-          longed = false;
-          lpTimer = setTimeout(function () { longed = true; editJournalNote(mid, date); }, 600);
-        });
-        const clearLp = function () { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } };
-        cell.addEventListener("pointerup", clearLp);
-        cell.addEventListener("pointerleave", clearLp);
       });
     }
 
-    function addJournalDate(courseId, dateStr) {
+    function addJournalDate(courseId, mentorId, dateStr) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr || "")) { showToast("올바른 날짜를 선택하세요."); return; }
+      const existing = (AppState.activityLogs && AppState.activityLogs[mentorId]) || {};
+      if (existing[dateStr]) { showToast("이미 추가된 날짜입니다: " + dateStr); return; }
+      if (Object.keys(existing).length >= JOURNAL_MAX) {
+        showToast("멘토당 최대 30개까지 추가할 수 있습니다.");
+        return;
+      }
       journalDateAdding = false;
-      safeWrite(db.ref("journalDates/" + courseId + "/" + dateStr).set(true), "날짜 추가에 실패했습니다.");
+      safeWrite(db.ref("activityLogs/" + mentorId + "/" + dateStr).set({
+        date: dateStr, submitted: "unchecked", note: "", updatedAt: TS
+      }), "날짜 추가에 실패했습니다.");
       logActivity("수행일지 날짜 추가: " + dateStr);
       renderJournal(courseId, true);
     }
 
-    function deleteJournalDate(courseId, dateStr) {
-      if (!window.confirm("'" + dateStr + "' 날짜의 모든 멘토 제출 현황을 삭제하시겠습니까?")) return;
-      const updates = {};
-      updates["journalDates/" + courseId + "/" + dateStr] = null;
-      entriesByCourse(AppState.mentors, courseId).forEach(function (m) {
-        updates["activityLogs/" + m[0] + "/" + dateStr] = null;
-      });
-      safeWrite(db.ref().update(updates), "날짜 삭제에 실패했습니다.");
-      logActivity("수행일지 날짜 삭제: " + dateStr);
+    // 상태 순환: unchecked → done → missing → unchecked
+    function cycleJournalStatus(mentorId, lid) {
+      const rec = ((AppState.activityLogs || {})[mentorId] || {})[lid];
+      if (!rec) return;
+      const cur = normSubmitted(rec);
+      const next = cur === "unchecked" ? "done" : (cur === "done" ? "missing" : "unchecked");
+      safeWrite(db.ref("activityLogs/" + mentorId + "/" + lid).update({ submitted: next, updatedAt: TS }),
+        "상태 저장에 실패했습니다.");
     }
 
-    // 셀 상태 순환: 미확인 → 작성완료 → 미작성 → 미확인
-    function cycleJournalCell(mentorId, date) {
-      const st = journalState(mentorId, date);
-      const rec = journalRec(mentorId, date) || {};
-      const hasNote = !!(rec.note && rec.note.trim());
-      let next; // true | false | null(미확인)
-      if (st === "none") next = true;
-      else if (st === "done") next = false;
-      else next = null;
-
-      // 미확인으로 돌아가고 메모도 없으면 레코드 삭제
-      if (next === null && !hasNote) {
-        safeWrite(db.ref("activityLogs/" + mentorId + "/" + date).remove(), "제출 현황 저장에 실패했습니다.");
-        return;
-      }
-      const payload = { date: date, note: rec.note || "", checkedAt: TS, checkedBy: "manager" };
-      if (next !== null) payload.submitted = next;
-      safeWrite(db.ref("activityLogs/" + mentorId + "/" + date).set(payload), "제출 현황 저장에 실패했습니다.");
+    function saveJournalNote(mentorId, lid, value) {
+      const rec = ((AppState.activityLogs || {})[mentorId] || {})[lid];
+      if (!rec) return;
+      const v = (value || "").trim();
+      if ((rec.note || "") === v) return;
+      safeWrite(db.ref("activityLogs/" + mentorId + "/" + lid).update({ note: v, updatedAt: TS }),
+        "메모 저장에 실패했습니다.");
     }
 
-    function editJournalNote(mentorId, date) {
-      const rec = journalRec(mentorId, date) || {};
-      const note = window.prompt("메모 입력 (예: 지각 제출, 미제출 사유)", rec.note || "");
-      if (note === null) return; // 취소
-      const payload = { date: date, note: note.trim(), checkedAt: TS, checkedBy: "manager" };
-      if (rec.submitted === true || rec.submitted === false) payload.submitted = rec.submitted;
-      safeWrite(db.ref("activityLogs/" + mentorId + "/" + date).set(payload), "메모 저장에 실패했습니다.");
+    function deleteJournalDate(mentorId, lid) {
+      const rec = ((AppState.activityLogs || {})[mentorId] || {})[lid];
+      const dateLabel = (rec && rec.date) || lid;
+      if (!window.confirm("'" + dateLabel + "' 날짜를 삭제하시겠습니까?")) return;
+      safeWrite(db.ref("activityLogs/" + mentorId + "/" + lid).remove(), "삭제에 실패했습니다.");
+      logActivity("수행일지 날짜 삭제: " + dateLabel);
     }
 
     /* =========================================================
